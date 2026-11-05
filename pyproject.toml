@@ -4,7 +4,10 @@ version = "0.1.0"
 description = "German-first, English-capable AI phone receptionist for a fictional doctor's office."
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "livekit-agents[deepgram,elevenlabs,openai,silero,turn-detector]~=1.8.10",
+    "python-dotenv~=1.2",
+]
 
 [dependency-groups]
 dev = [
@@ -36,4 +39,5 @@ mypy_path = "src"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra --strict-markers"
+addopts = "-ra --strict-markers -m 'not live'"
+markers = ["live: calls real external APIs; needs .env keys (run with -m live)"]
