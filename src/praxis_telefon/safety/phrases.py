@@ -12,17 +12,10 @@ import re
 from dataclasses import dataclass
 from typing import Literal
 
+from praxis_telefon.text import normalize
+
 Language = Literal["de", "en"]
 CrisisKind = Literal["suicide", "emergency"]
-
-_FOLD = str.maketrans({"ä": "ae", "ö": "oe", "ü": "ue", "ß": "ss", "\u2019": "", "'": ""})
-_NON_WORD = re.compile(r"[^a-z0-9]+")
-
-
-def normalize(text: str) -> str:
-    """Lowercase, fold umlauts and ß, drop apostrophes, keep only letters and digits."""
-    folded = text.casefold().translate(_FOLD)
-    return " " + _NON_WORD.sub(" ", folded).strip() + " "
 
 
 def _compile(patterns: list[str]) -> re.Pattern[str]:

@@ -19,7 +19,7 @@ from praxis_telefon.db.schema import PRACTICE_TZ, connect, init_db, name_key, to
 
 DOCTORS = ("Dr. Katharina Weber", "Dr. Jonas Brandt")
 SLOT_MINUTES = 30
-DAYS = 14
+DAYS = 28
 
 MORNING = (time(8, 0), time(12, 0))
 AFTERNOON = (time(15, 0), time(18, 0))

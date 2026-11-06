@@ -91,3 +91,22 @@ def test_receptionist_registers_all_tools(tmp_path: Path) -> None:
         "take_message",
     ]
     conn.close()
+
+
+def test_find_slots_takes_the_callers_words_not_dates(tmp_path: Path) -> None:
+    # M3 Part B: the LLM passes "when" (caller's words); dates are computed in code.
+    from livekit.agents.llm.utils import build_legacy_openai_schema
+
+    from praxis_telefon.agent.receptionist import Receptionist
+    from praxis_telefon.agent.tool_service import ToolService
+    from praxis_telefon.db.schema import connect, init_db
+
+    conn = connect(tmp_path / "t.db")
+    init_db(conn)
+    agent = Receptionist(ToolService(conn, main.practice_now))
+    tool = next(t for t in agent.tools if getattr(t, "id", "") == "find_slots")
+    params = build_legacy_openai_schema(tool)["function"]["parameters"]  # type: ignore[arg-type]
+    assert "when" in params["required"]
+    assert "date_from" not in params["properties"] and "date_to" not in params["properties"]
+    assert "nächsten Dienstag" in params["properties"]["when"]["description"]
+    conn.close()

@@ -222,7 +222,7 @@ def test_booking_tools_refused_in_code_after_emergency(
 ) -> None:
     _say(agent, "Ich habe Atemnot.")
     calls: list[Callable[[], object]] = [
-        lambda: service.find_slots("2026-11-10", "2026-11-10", "any", None),
+        lambda: service.find_slots("2026-11-10", "any", None),
         lambda: service.book(1, NAME, DOB.isoformat()),
         lambda: service.find_booking(NAME, DOB.isoformat()),
         lambda: service.move(1, 2),
@@ -235,7 +235,7 @@ def test_booking_tools_refused_in_code_after_emergency(
 
 
 def test_booking_allowed_in_normal_mode(agent: Receptionist, service: ToolService) -> None:
-    assert "Freie Termine" in service.find_slots("2026-11-10", "2026-11-10", "any", None)
+    assert "Freie Termine" in service.find_slots("2026-11-10", "any", None)
 
 
 # --- logging ----------------------------------------------------------------------------

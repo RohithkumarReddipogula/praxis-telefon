@@ -99,3 +99,9 @@ def test_instructions_start_with_today() -> None:
     text = build_instructions(datetime(2026, 11, 6, 9, 0, tzinfo=PRACTICE_TZ))
     assert text.startswith("Heute ist Freitag, der 6. November 2026")
     assert SYSTEM_PROMPT in text
+
+
+def test_prompt_passes_callers_date_words_to_find_slots() -> None:
+    assert "bei when die Worte des Anrufers" in FLAT
+    assert "Rechne Daten nie selbst aus" in FLAT
+    assert 'unter "Gesucht"' in FLAT

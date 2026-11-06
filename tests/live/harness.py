@@ -13,6 +13,7 @@ import re
 import sqlite3
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any
 
 from livekit.agents import AgentSession
@@ -154,8 +155,12 @@ def converse(
     steps: list[Step],
     *,
     setup: Setup | None = None,
+    clock: Callable[[], datetime] | None = None,
 ) -> list[Call]:
-    """Run one call; returns the events per step. ``setup`` runs after the session starts."""
+    """Run one call; returns the events per step.
+
+    ``setup`` runs after the session starts; ``clock`` replaces the fixed NOW.
+    """
     from dotenv import load_dotenv
 
     from praxis_telefon.config import Settings
@@ -167,7 +172,7 @@ def converse(
     async def run() -> None:
         llm = openai.LLM.with_openrouter(**main.llm_options(settings), api_key=settings.llm_api_key)
         async with llm, AgentSession(llm=llm) as session:
-            agent = Receptionist(ToolService(conn, lambda: NOW))
+            agent = Receptionist(ToolService(conn, clock or (lambda: NOW)))
             await session.start(agent)
             if setup is not None:
                 await setup(session, agent)
@@ -219,4 +224,21 @@ def agent_texts(call: Call) -> list[str]:
         e.item.text_content or ""
         for e in call.events
         if isinstance(e, ChatMessageEvent) and e.item.role == "assistant"
+    ]
+
+
+def tool_outputs(call: Call, tool: str) -> list[str]:
+    """Outputs of successful calls to ``tool``."""
+    return [
+        e.item.output
+        for e in call.events
+        if isinstance(e, FunctionCallOutputEvent) and e.item.name == tool and not e.item.is_error
+    ]
+
+
+def tool_arguments(call: Call, tool: str) -> list[str]:
+    return [
+        e.item.arguments
+        for e in call.events
+        if isinstance(e, FunctionCallEvent) and e.item.name == tool
     ]

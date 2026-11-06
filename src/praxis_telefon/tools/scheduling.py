@@ -31,7 +31,7 @@ from praxis_telefon.tools.validation import check_date_of_birth, clean_name, req
 PartOfDay = Literal["morning", "afternoon", "any"]
 PARTS_OF_DAY: tuple[PartOfDay, ...] = ("morning", "afternoon", "any")
 MAX_RESULTS = 3
-MAX_RANGE_DAYS = 14
+MAX_RANGE_DAYS = 28  # matches the seed and relative_dates.HORIZON_DAYS
 NOON = time(12, 0)
 
 

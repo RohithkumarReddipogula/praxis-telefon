@@ -66,7 +66,7 @@ def test_range_starting_in_past_is_clamped_to_today(conn: sqlite3.Connection) ->
 
 @pytest.mark.parametrize(
     ("offset_from", "offset_to"),
-    [(3, 1), (0, 14), (0, 30)],
+    [(3, 1), (0, 28), (0, 30)],
 )
 def test_invalid_ranges_rejected(
     conn: sqlite3.Connection, offset_from: int, offset_to: int

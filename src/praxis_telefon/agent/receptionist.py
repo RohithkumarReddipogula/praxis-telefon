@@ -142,20 +142,23 @@ class Receptionist(Agent):
     async def find_slots(
         self,
         context: RunContext[Any],
-        date_from: str,
-        date_to: str,
+        when: str,
         part_of_day: Literal["morning", "afternoon", "any"] = "any",
         doctor: str | None = None,
     ) -> str:
         """Search free appointment slots. Returns at most 3. Only offer slots returned here.
 
+        The result starts with "Gesucht: <date>": the day the caller's words mean. Use
+        that date; never work out dates yourself.
+
         Args:
-            date_from: First day to search, ISO format YYYY-MM-DD.
-            date_to: Last day to search, ISO format YYYY-MM-DD, at most 14 days after date_from.
+            when: The caller's own words for the day or period, unchanged, e.g. "morgen",
+                "nächsten Dienstag", "Ende der Woche", "in zwei Wochen", "12. November",
+                "so bald wie möglich", "tomorrow", "next Thursday".
             part_of_day: "morning" (before 12:00), "afternoon" or "any".
             doctor: Optional doctor surname, e.g. "Weber" or "Brandt".
         """
-        return _run(lambda: self._service.find_slots(date_from, date_to, part_of_day, doctor))
+        return _run(lambda: self._service.find_slots(when, part_of_day, doctor))
 
     @function_tool
     async def book(

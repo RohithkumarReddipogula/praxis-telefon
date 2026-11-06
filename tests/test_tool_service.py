@@ -47,7 +47,7 @@ def captured_logs() -> Iterator[io.StringIO]:
 
 
 def _offer_first(service: ToolService) -> int:
-    text = service.find_slots("2026-11-09", "2026-11-09", "morning", None)
+    text = service.find_slots("2026-11-09", "morning", None)
     return int(text.split("slot_id=")[1].split(":")[0])
 
 
@@ -95,9 +95,7 @@ def test_move_needs_verified_booking_and_offered_slot(
     with pytest.raises(errors.SlotNotOffered):
         fresh_call.move(booking_id, 999)
     new_slot = int(
-        fresh_call.find_slots("2026-11-10", "2026-11-10", "any", None)
-        .split("slot_id=")[1]
-        .split(":")[0]
+        fresh_call.find_slots("2026-11-10", "any", None).split("slot_id=")[1].split(":")[0]
     )
     assert fresh_call.move(booking_id, new_slot).startswith("Verschoben")
 
@@ -116,17 +114,20 @@ def test_unparseable_birthday(service: ToolService, bad: str) -> None:
         service.find_booking(PII_NAME, bad)
 
 
-def test_unparseable_date_range(service: ToolService) -> None:
-    with pytest.raises(errors.InvalidDateRange):
-        service.find_slots("nächsten Dienstag", "2026-11-10", "any", None)
+def test_unparseable_date(service: ToolService) -> None:
+    with pytest.raises(errors.DateNotUnderstood):
+        service.find_slots("irgendwann mal", "any", None)
 
 
 def test_no_slots_message(service: ToolService) -> None:
-    assert "Keine freien Termine" in service.find_slots("2026-11-14", "2026-11-15", "any", None)
+    # Wednesday has no afternoon hours.
+    text = service.find_slots("2026-11-11", "afternoon", None)
+    assert "Keine freien Termine" in text
+    assert text.startswith("Gesucht: Mittwoch, 11. November.")
 
 
 def test_find_slots_text_lists_only_returned_slots(service: ToolService) -> None:
-    text = service.find_slots("2026-11-09", "2026-11-13", "any", None)
+    text = service.find_slots("2026-11-09 bis 2026-11-13", "any", None)
     assert text.count("slot_id=") == 3
     assert len(service.guards.offered_slot_ids) == 3
 
@@ -222,7 +223,7 @@ def test_failure_messages_never_echo_arguments(service: ToolService) -> None:
         lambda: service.find_booking(PII_NAME, "1971-23-04"),
         lambda: service.take_message(PII_NAME, "0302", "callback"),
         lambda: service.take_message(PII_NAME, PII_PHONE, "Quellenberg 1971"),
-        lambda: service.find_slots("2026-11-09", "2026-11-09", "any", "Dr. Quellenberg"),
+        lambda: service.find_slots("2026-11-09", "any", "Dr. Quellenberg"),
     ]
     for attempt in attempts:
         with pytest.raises(errors.ToolFailure) as exc:
@@ -238,3 +239,38 @@ def test_tool_error_for_llm_has_code_and_no_arguments() -> None:
         _run(fail)
     assert str(exc.value).startswith("slot_taken:")
     _assert_no_pii(str(exc.value))
+
+
+# --- relative dates (M3 Part B) ---------------------------------------------------------
+
+
+def test_find_slots_resolves_the_callers_words(service: ToolService) -> None:
+    text = service.find_slots("nächsten Dienstag", "morning", None)
+    assert text.startswith("Gesucht: Dienstag, 10. November.\n")
+    assert "Dienstag, 10. November, um 8 Uhr" in text
+
+
+def test_find_slots_on_friday_for_tomorrow_says_closed(conn: sqlite3.Connection) -> None:
+    friday = NOW.replace(day=13, hour=10)
+    service = ToolService(conn, lambda: friday)
+    text = service.find_slots("morgen", "any", None)
+    assert text.startswith(
+        "Samstag, 14. November: Praxis geschlossen. Stattdessen gesucht: Montag, 16. November."
+    )
+    assert "Montag, 16. November, um 8 Uhr" in text
+
+
+def test_find_slots_range_header(service: ToolService) -> None:
+    text = service.find_slots("Ende der Woche", "any", None)
+    assert text.startswith("Gesucht: Donnerstag, 12. November bis Freitag, 13. November.")
+
+
+def test_find_slots_too_far(service: ToolService) -> None:
+    with pytest.raises(errors.DateTooFar):
+        service.find_slots("in sechs Wochen", "any", None)
+
+
+def test_date_errors_never_echo_the_phrase(service: ToolService) -> None:
+    with pytest.raises(errors.DateNotUnderstood) as exc:
+        service.find_slots("wenn Quellenberg Zeit hat", "any", None)
+    assert "Quellenberg" not in str(exc.value)

@@ -17,7 +17,7 @@ class ToolFailure(Exception):
 
 class InvalidDateRange(ToolFailure):
     code = "invalid_date_range"
-    message = "Der Zeitraum ist ungültig. Bitte höchstens 14 Tage ab heute angeben."
+    message = "Der Zeitraum ist ungültig. Bitte höchstens 28 Tage ab heute angeben."
 
 
 class InvalidPartOfDay(ToolFailure):
@@ -91,3 +91,21 @@ class BookingDisabled(ToolFailure):
         "In diesem Gespräch sind keine Terminbuchungen mehr möglich. Nur noch eine "
         "Nachricht für das Praxisteam aufnehmen, wenn der Anrufer das möchte."
     )
+
+
+class DateNotUnderstood(ToolFailure):
+    code = "date_not_understood"
+    message = (
+        "Diesen Tag oder Zeitraum habe ich nicht verstanden. Den Anrufer nach einem "
+        "konkreten Tag fragen, zum Beispiel morgen, nächsten Dienstag oder 12. November."
+    )
+
+
+class DateInPast(ToolFailure):
+    code = "date_in_past"
+    message = "Dieser Tag liegt in der Vergangenheit. Nach einem späteren Tag fragen."
+
+
+class DateTooFar(ToolFailure):
+    code = "date_too_far"
+    message = "Termine gibt es nur für die nächsten vier Wochen. Nach einem früheren Tag fragen."

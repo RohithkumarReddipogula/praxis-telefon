@@ -1,7 +1,8 @@
 """Per-call adapter between the LLM-facing tools and the plain tool functions.
 
 No LiveKit imports, so it is testable without network. It:
-- parses LLM string arguments (ISO dates),
+- turns the caller's words for a day (``when``) into dates via relative_dates,
+- parses LLM string arguments (ISO dates of birth),
 - enforces per-call guards: ``book``/``move`` only accept slot ids that ``find_slots``
   returned in this call; ``move``/``cancel`` only accept booking ids this call verified
   via ``find_booking`` or created via ``book``,
@@ -23,12 +24,11 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 
 from praxis_telefon.db.schema import name_key
-from praxis_telefon.tools import messages, scheduling
+from praxis_telefon.tools import messages, relative_dates, scheduling
 from praxis_telefon.tools.errors import (
     BookingDisabled,
     BookingNotVerified,
     InvalidDateOfBirth,
-    InvalidDateRange,
     SlotNotOffered,
     ToolFailure,
 )
@@ -89,22 +89,37 @@ class ToolService:
         if not self.booking_allowed():
             raise BookingDisabled()
 
-    def find_slots(self, date_from: str, date_to: str, part_of_day: str, doctor: str | None) -> str:
+    def find_slots(self, when: str, part_of_day: str, doctor: str | None) -> str:
         with self._logged("find_slots"):
             self._require_booking()
+            # The caller's words become dates here, in code, never in the LLM.
+            found = relative_dates.resolve_for_search(when, self._clock())
+            if found.closed:
+                header = (
+                    f"{found.requested.spoken()}: Praxis geschlossen. "
+                    f"Stattdessen gesucht: {found.search.spoken()}."
+                )
+            else:
+                header = f"Gesucht: {found.search.spoken()}."
             options = scheduling.find_slots(
                 self._conn,
                 now=self._clock(),
-                date_from=_parse_date(date_from, InvalidDateRange),
-                date_to=_parse_date(date_to, InvalidDateRange),
+                date_from=found.search.start,
+                date_to=found.search.end,
                 part_of_day=part_of_day,
                 doctor=doctor or None,
             )
             if not options:
-                return "Keine freien Termine in diesem Zeitraum. Einen anderen Zeitraum suchen."
+                return (
+                    f"{header}\nKeine freien Termine in diesem Zeitraum. "
+                    "Einen anderen Zeitraum suchen."
+                )
             self.guards.offered_slot_ids.update(o.slot_id for o in options)
             lines = [f"slot_id={o.slot_id}: {o.spoken}" for o in options]
-            return "Freie Termine (nur diese anbieten, wörtlich vorlesen):\n" + "\n".join(lines)
+            return (
+                f"{header}\nFreie Termine (nur diese anbieten, wörtlich vorlesen):\n"
+                + "\n".join(lines)
+            )
 
     def book(self, slot_id: int, patient_name: str, date_of_birth: str) -> str:
         with self._logged("book"):

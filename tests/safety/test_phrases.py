@@ -2,7 +2,8 @@
 
 import pytest
 
-from praxis_telefon.safety.phrases import asks_for_human, detect_crisis, is_short_answer, normalize
+from praxis_telefon.safety.phrases import asks_for_human, detect_crisis, is_short_answer
+from praxis_telefon.text import normalize
 
 EMERGENCY_DE = [
     "Ich habe starke Brustschmerzen.",

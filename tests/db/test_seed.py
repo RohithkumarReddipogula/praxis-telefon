@@ -19,12 +19,13 @@ def test_two_doctors(conn: sqlite3.Connection) -> None:
     assert names == list(DOCTORS) and len(names) == 2
 
 
-def test_weekdays_only_and_within_14_days(conn: sqlite3.Connection) -> None:
+def test_weekdays_only_and_within_28_days(conn: sqlite3.Connection) -> None:
     starts = _local_starts(conn)
     assert starts
     assert all(s.weekday() < 5 for s in starts)
     assert min(s.date() for s in starts) >= MONDAY
-    assert max(s.date() for s in starts) < MONDAY + timedelta(days=14)
+    assert max(s.date() for s in starts) < MONDAY + timedelta(days=28)
+    assert max(s.date() for s in starts) >= MONDAY + timedelta(days=25)  # covers 4 weeks
 
 
 def test_slots_inside_opening_hours(conn: sqlite3.Connection) -> None:
