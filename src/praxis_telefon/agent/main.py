@@ -32,6 +32,7 @@ from praxis_telefon.agent.prompts import GREETING_DE
 from praxis_telefon.agent.receptionist import Receptionist
 from praxis_telefon.agent.tool_service import ToolService
 from praxis_telefon.agent.turn_log import build_turn_record, format_turn_record
+from praxis_telefon.agent.unrecognized_speech import attach_unrecognized_speech
 from praxis_telefon.config import Settings
 from praxis_telefon.db.schema import PRACTICE_TZ, connect
 from praxis_telefon.logging_privacy import install_pii_filter
@@ -169,7 +170,11 @@ async def entrypoint(ctx: JobContext) -> None:
     ctx.add_shutdown_callback(release_console_audio)
 
     # record=False: do not upload call audio/transcripts to LiveKit Cloud observability.
-    await session.start(agent=Receptionist(service), room=ctx.room, record=False)
+    agent = Receptionist(service)
+    # Caller spoke but STT produced nothing: counts as a strike (two in a row: handover).
+    attach_unrecognized_speech(session, agent.on_unrecognized_speech)
+
+    await session.start(agent=agent, room=ctx.room, record=False)
     session.say(GREETING_DE, allow_interruptions=False)
 
 

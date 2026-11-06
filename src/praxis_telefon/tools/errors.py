@@ -83,3 +83,11 @@ class InvalidCallbackNumber(ToolFailure):
 class InvalidReasonCategory(ToolFailure):
     code = "invalid_reason_category"
     message = "Bitte eine der vorgegebenen Kategorien für das Anliegen wählen."
+
+
+class BookingDisabled(ToolFailure):
+    code = "booking_disabled"
+    message = (
+        "In diesem Gespräch sind keine Terminbuchungen mehr möglich. Nur noch eine "
+        "Nachricht für das Praxisteam aufnehmen, wenn der Anrufer das möchte."
+    )

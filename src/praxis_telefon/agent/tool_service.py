@@ -6,6 +6,8 @@ No LiveKit imports, so it is testable without network. It:
   returned in this call; ``move``/``cancel`` only accept booking ids this call verified
   via ``find_booking`` or created via ``book``,
 - returns short German text for the LLM,
+- refuses all scheduling tools once ``booking_allowed()`` is False (emergency or
+  message-only mode), so this does not depend on the LLM respecting the tool list,
 - logs tool name, outcome code and duration only, never argument values.
 """
 
@@ -23,6 +25,7 @@ from datetime import date, datetime
 from praxis_telefon.db.schema import name_key
 from praxis_telefon.tools import messages, scheduling
 from praxis_telefon.tools.errors import (
+    BookingDisabled,
     BookingNotVerified,
     InvalidDateOfBirth,
     InvalidDateRange,
@@ -55,6 +58,8 @@ class ToolService:
         self._conn = conn
         self._clock = clock
         self.guards = CallGuards()
+        # Set by the agent: False once the call is in emergency or message-only mode.
+        self.booking_allowed: Callable[[], bool] = lambda: True
 
     def now(self) -> datetime:
         return self._clock()
@@ -80,8 +85,13 @@ class ToolService:
             record = {"event": "tool", "tool": tool, "outcome": log["outcome"], "ms": ms}
             logger.info(json.dumps(record, separators=(",", ":")))
 
+    def _require_booking(self) -> None:
+        if not self.booking_allowed():
+            raise BookingDisabled()
+
     def find_slots(self, date_from: str, date_to: str, part_of_day: str, doctor: str | None) -> str:
         with self._logged("find_slots"):
+            self._require_booking()
             options = scheduling.find_slots(
                 self._conn,
                 now=self._clock(),
@@ -98,6 +108,7 @@ class ToolService:
 
     def book(self, slot_id: int, patient_name: str, date_of_birth: str) -> str:
         with self._logged("book"):
+            self._require_booking()
             if slot_id not in self.guards.offered_slot_ids:
                 raise SlotNotOffered()
             result = scheduling.book(
@@ -113,6 +124,7 @@ class ToolService:
 
     def find_booking(self, patient_name: str, date_of_birth: str) -> str:
         with self._logged("find_booking"):
+            self._require_booking()
             bookings = scheduling.find_booking(
                 self._conn,
                 now=self._clock(),
@@ -130,6 +142,7 @@ class ToolService:
 
     def move(self, booking_id: int, new_slot_id: int) -> str:
         with self._logged("move"):
+            self._require_booking()
             if booking_id not in self.guards.verified_booking_ids:
                 raise BookingNotVerified()
             if new_slot_id not in self.guards.offered_slot_ids:
@@ -143,6 +156,7 @@ class ToolService:
 
     def cancel(self, booking_id: int) -> str:
         with self._logged("cancel"):
+            self._require_booking()
             if booking_id not in self.guards.verified_booking_ids:
                 raise BookingNotVerified()
             result = scheduling.cancel(self._conn, now=self._clock(), booking_id=booking_id)

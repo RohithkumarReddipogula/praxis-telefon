@@ -1,15 +1,48 @@
-"""The LiveKit Agent: function tools that delegate to ToolService."""
+"""The LiveKit Agent: safety screening before the LLM, and function tools.
+
+Every reply goes through ``llm_node`` (voice turns, typed input, ``generate_reply``).
+There the call's safety state is replayed from the conversation (see
+``safety/call_state.py``) and, if needed, a fixed message is returned instead of
+calling the LLM. In emergency or message-only mode the LLM only gets ``take_message``,
+and ToolService refuses scheduling tools in code as well.
+"""
 
 from __future__ import annotations
 
-from collections.abc import Callable
+import json
+import logging
+import time
+from collections.abc import AsyncIterable, Callable
 from typing import Any, Literal
 
-from livekit.agents import Agent, RunContext, ToolError, function_tool
+from livekit.agents import (
+    Agent,
+    FlushSentinel,
+    ModelSettings,
+    RunContext,
+    ToolError,
+    function_tool,
+    llm,
+)
 
 from praxis_telefon.agent.prompts import build_instructions
+from praxis_telefon.agent.speech_lock import lock_current_speech
 from praxis_telefon.agent.tool_service import ToolService
+from praxis_telefon.safety.call_state import (
+    Action,
+    CallerTurn,
+    Event,
+    Mode,
+    State,
+    UnrecognizedSpeech,
+    replay,
+)
+from praxis_telefon.safety.messages import FIXED_MESSAGES, MODE_NOTES, SUICIDE_NOTE, UNINTERRUPTIBLE
 from praxis_telefon.tools.errors import ToolFailure
+
+logger = logging.getLogger("praxis_telefon.safety")
+
+MESSAGE_ONLY_TOOLS = frozenset({"take_message"})
 
 
 def _run(call: Callable[[], str]) -> str:
@@ -20,10 +53,90 @@ def _run(call: Callable[[], str]) -> str:
         raise ToolError(f"{e.code}: {e.message}") from None
 
 
+def _tool_name(tool: llm.Tool) -> str:
+    info = getattr(tool, "info", None)
+    return str(getattr(info, "name", ""))
+
+
 class Receptionist(Agent):
     def __init__(self, service: ToolService) -> None:
         super().__init__(instructions=build_instructions(service.now()))
         self._service = service
+        self._unrecognized_at: list[float] = []
+        self._pending: Action | None = None
+        self._logged_ids: set[str] = set()
+        service.booking_allowed = lambda: self.safety_state().mode is Mode.NORMAL
+
+    # --- safety state ------------------------------------------------------------------
+
+    def _events(self, chat_ctx: llm.ChatContext) -> list[Event]:
+        timed: list[tuple[float, Event]] = [
+            (t, UnrecognizedSpeech()) for t in self._unrecognized_at
+        ]
+        for item in chat_ctx.items:
+            if isinstance(item, llm.ChatMessage) and item.role == "user":
+                turn = CallerTurn(item.text_content or "", item.transcript_confidence)
+                timed.append((item.created_at, turn))
+        timed.sort(key=lambda pair: pair[0])
+        return [event for _, event in timed]
+
+    def safety_state(self) -> State:
+        """State from the committed conversation (used by the ToolService guard)."""
+        return replay(self._events(self.chat_ctx))[0]
+
+    def on_unrecognized_speech(self) -> Any:
+        """Called when the caller spoke but STT produced nothing. Returns the SpeechHandle."""
+        self._unrecognized_at.append(time.time())
+        _, action = replay(self._events(self.chat_ctx))
+        self._log(action, key=f"unrecognized-{len(self._unrecognized_at)}")
+        if action.kind == "none":
+            return None
+        self._pending = action
+        return self.session.generate_reply(allow_interruptions=True)
+
+    def _log(self, action: Action, *, key: str) -> None:
+        if action.kind == "none" or key in self._logged_ids:
+            return
+        self._logged_ids.add(key)
+        record = {"event": "safety", "action": action.kind}  # never the caller's words
+        logger.info(json.dumps(record, separators=(",", ":")))
+
+    # --- LLM node ----------------------------------------------------------------------
+
+    def _action_for(self, chat_ctx: llm.ChatContext) -> tuple[State, Action | None]:
+        state, action = replay(self._events(chat_ctx))
+        last = chat_ctx.items[-1] if chat_ctx.items else None
+        if isinstance(last, llm.ChatMessage) and last.role == "user":
+            self._log(action, key=last.id)
+            return state, action
+        pending, self._pending = self._pending, None
+        return state, pending
+
+    async def llm_node(
+        self,
+        chat_ctx: llm.ChatContext,
+        tools: list[llm.Tool],
+        model_settings: ModelSettings,
+    ) -> AsyncIterable[llm.ChatChunk | str | FlushSentinel]:
+        state, action = self._action_for(chat_ctx)
+        if action is not None and action.kind != "none":
+            if action.kind in UNINTERRUPTIBLE:
+                lock_current_speech()
+            yield FIXED_MESSAGES[(action.kind, action.language)]
+            return
+
+        if state.mode is not Mode.NORMAL:
+            tools = [t for t in tools if _tool_name(t) in MESSAGE_ONLY_TOOLS]
+            chat_ctx = chat_ctx.copy()
+            note = MODE_NOTES[state.mode]
+            if state.suicide_mentioned:
+                note = f"{note} {SUICIDE_NOTE}"
+            chat_ctx.add_message(role="system", content=note)
+
+        async for chunk in Agent.default.llm_node(self, chat_ctx, tools, model_settings):
+            yield chunk
+
+    # --- tools ------------------------------------------------------------------------
 
     @function_tool
     async def find_slots(
