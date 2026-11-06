@@ -32,6 +32,7 @@ from praxis_telefon.agent.claim_check import ClaimTracker
 from praxis_telefon.agent.console_audio import release_console_audio
 from praxis_telefon.agent.prompts import GREETING_DE
 from praxis_telefon.agent.receptionist import Receptionist
+from praxis_telefon.agent.tool_filler import is_tool_filler
 from praxis_telefon.agent.tool_service import ToolService
 from praxis_telefon.agent.turn_log import build_turn_record, format_turn_record
 from praxis_telefon.agent.unrecognized_speech import attach_unrecognized_speech
@@ -137,7 +138,9 @@ def build_session(settings: Settings) -> AgentSession[Any]:
 
 
 def attach_turn_logger(session: AgentSession[Any]) -> None:
-    state: dict[str, Any] = {"turn": 0, "last_user": None}
+    # last_user: the caller's STT/EOU metrics, for the first record after the line only.
+    # caller_stopped_at: kept for every record until the next line (filler, then answer).
+    state: dict[str, Any] = {"turn": 0, "last_user": None, "caller_stopped_at": None}
 
     @session.on("conversation_item_added")
     def _on_item(ev: ConversationItemAddedEvent) -> None:
@@ -146,6 +149,8 @@ def attach_turn_logger(session: AgentSession[Any]) -> None:
             return
         if item.role == "user":
             state["last_user"] = dict(item.metrics)
+            stopped = item.metrics.get("stopped_speaking_at")
+            state["caller_stopped_at"] = stopped if isinstance(stopped, int | float) else None
         elif item.role == "assistant":
             state["turn"] += 1
             record = build_turn_record(
@@ -153,6 +158,8 @@ def attach_turn_logger(session: AgentSession[Any]) -> None:
                 state["last_user"],
                 dict(item.metrics),
                 interrupted=item.interrupted,
+                is_filler=is_tool_filler(item.text_content or ""),
+                caller_stopped_at=state["caller_stopped_at"],
             )
             state["last_user"] = None
             logger.info(format_turn_record(record))

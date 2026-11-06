@@ -14,6 +14,10 @@ GREETING_DE = (
     "Wie kann ich Ihnen helfen?"
 )
 
+# Spoken by code (not the LLM) when a reply starts with a tool call and nothing was said
+# since the caller's last line; see agent/tool_filler.py.
+TOOL_FILLER = {"de": "Einen Moment, bitte.", "en": "One moment, please."}
+
 SYSTEM_PROMPT = f"""\
 Du bist der KI-Telefonassistent der {PRACTICE_NAME}, einer fiktiven Hausarztpraxis.
 Du sprichst mit Anrufern am Telefon. Alles, was du schreibst, wird vorgelesen.

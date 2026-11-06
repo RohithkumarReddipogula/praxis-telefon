@@ -122,6 +122,44 @@ planned to close that gap (see below).
   sentence named them, so "Übermorgen wäre der 11. November" before `find_slots` was
   spoken (C's failures). Fixed: today's date backs only today's weekday.
 
+## Follow-up: code-spoken filler (2026-11-06)
+
+`agent/tool_filler.py` says "Einen Moment, bitte." / "One moment, please." when a reply
+called a tool and said nothing, and nothing was said since the caller's last line (so at
+most once per caller turn). The decision is made when the filtered reply ends: the
+sentence filter may still hold "Einen Moment, ich schaue nach." when the tool call chunk
+passes, and a first draft that fired on that chunk said both. A tool call is the last
+thing in the stream, so the end comes right after it. The phrase is fixed text, so it
+cannot leak; fillers in the history change neither the safety replay nor `intent_asked`
+(tests).
+
+3 runs, B settings (English descriptions, reasoning `low`), filler on:
+
+| | A (none) | B (low) | B + filler |
+|---|---|---|---|
+| Passed | 390/390 | 390/390 | 234/234 |
+| Leaks per 75 tests | 6.0 | 0 | 0.3 |
+| Caller line → first speech p50 / p90 | 1022 / 1988 ms | 2128 / 3361 ms | **1212 / 2853 ms** |
+| Caller line → answer p50 / p90 | 1022 / 1988 ms | 2128 / 3361 ms | 2173 / 3432 ms |
+| Time to tool call p50 / p90 | 1016 / 1219 ms | 1126 / 2056 ms | 1221 / 2177 ms |
+
+(Leaks here count block reasons, as `eval/leak_report.py` reports them; the main results
+table above counts sentences.)
+
+- First speech p50 is 916 ms earlier than B and 190 ms later than A (the filler waits for
+  the tool call). The answer is not delayed (+45 ms p50, within noise).
+- Turns with the filler (262 of 406): first speech p50 1233 / p90 2185 ms, which matches
+  the time to the tool call.
+- The remaining p90 comes from turns **without** a tool (no filler): first speech p50
+  1121 / p90 3432 ms. With `low` the model sometimes thinks long before a direct text
+  answer too (`llm_ttft` p90 2.7 s against 1.2 s with `none`). Open: a timer-based filler
+  or a shorter thinking time; not built.
+- The one leak: the model wrote a `take_message` call as text ("[take_message aufrufen
+  mit caller_name …]"); `meta:tool` blocked it and the test passed.
+- Real end-to-end latency still needs a console session: the turn log now marks the
+  filler (`is_filler`) and gives every message `since_caller_s`, since LiveKit reports
+  `e2e_s` only for the first speech of a turn.
+
 ## Limitations
 
 - Text mode: no STT, end-of-turn detection or TTS; all four arms share those.

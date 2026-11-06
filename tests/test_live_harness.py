@@ -10,6 +10,7 @@ import pytest
 from livekit.agents import llm
 from livekit.agents.voice.run_result import ChatMessageEvent
 
+from praxis_telefon.agent.tool_filler import is_tool_filler
 from tests.live.harness import Call, caller_reply, public, timed, turn_record
 
 
@@ -122,7 +123,12 @@ def _run_timed(outputs: list[Any], clock_values: list[float]) -> dict[str, Any]:
     record: dict[str, Any] = {}
 
     async def consume() -> list[Any]:
-        return [o async for o in timed(stream(), record, clock=lambda: next(clock))]
+        return [
+            o
+            async for o in timed(
+                stream(), record, clock=lambda: next(clock), is_filler=is_tool_filler
+            )
+        ]
 
     assert asyncio.run(consume()) == outputs  # passed through unchanged
     return record
@@ -149,5 +155,30 @@ def test_turn_record_takes_the_first_text_of_the_turn() -> None:
         {"ttft_s": 0.5, "text_s": None, "tools": ["find_slots"], "llm_requests": 1},
         {"ttft_s": 0.3, "text_s": 0.3, "tools": [], "llm_requests": 1, "_text_at": 102.5},
     ]
-    assert turn_record(generations, 100.0) == {"first_speech_s": 2.5, "llm_requests": 2}
+    assert turn_record(generations, 100.0) == {
+        "first_speech_s": 2.5,
+        "first_answer_s": None,  # these runs predate answer_s: no _answer_at
+        "filler": False,
+        "llm_requests": 2,
+    }
     assert public(generations[1]) == {"ttft_s": 0.3, "text_s": 0.3, "tools": [], "llm_requests": 1}
+
+
+def test_timed_tells_the_filler_from_the_answer() -> None:
+    record = _run_timed(
+        [_chunk(tool="find_slots"), "Einen Moment, bitte. "],
+        [10.0, 11.1, 11.2],
+    )
+    assert record["text_s"] == 1.2 and record["filler"] is True
+    assert record["answer_s"] is None  # the filler is not the answer
+
+
+def test_turn_with_filler_has_first_speech_and_answer() -> None:
+    filler_run = _run_timed([_chunk(tool="find_slots"), "Einen Moment, bitte. "], [0, 1.1, 1.2])
+    answer_run = _run_timed(["Am Dienstag um neun Uhr wäre frei. "], [2.0, 2.4])
+    for g in (filler_run, answer_run):
+        g["llm_requests"] = 1
+    record = turn_record([filler_run, answer_run], 0.0)
+    assert record["first_speech_s"] == 1.2
+    assert record["first_answer_s"] == 2.4
+    assert record["filler"] is True

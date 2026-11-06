@@ -12,8 +12,9 @@ Per arm:
   narration would pass it; the ones the filters let through, other than greetings,
   thanks and "I'm looking it up" (is_preamble), are listed for review;
 - retries and fixed fallback sentences;
-- llm_ttft (as in the turn log: replies that spoke), time to a tool call, and time from
-  the caller's line to the first spoken text; p50 and p90;
+- llm_ttft (as in the turn log: replies that spoke, the code filler not counted), time
+  to a tool call, time from the caller's line to the first spoken text (filler
+  included) and to the answer (first text that is not the filler); p50 and p90;
 - tokens and estimated cost (OpenRouter's dashboard is the reference).
 
     uv run python -m eval.leak_report eval/results/*.jsonl
@@ -76,7 +77,8 @@ def arm_of(entry: dict[str, Any]) -> str:
     if not c:
         return "unknown"
     tools, effort, cache = c.get("tool_docs"), c.get("reasoning_effort"), c.get("prompt_cache")
-    return f"tools={tools} reasoning={effort} cache={cache} {c.get('model')}"
+    filler = c.get("tool_filler", "off")
+    return f"tools={tools} reasoning={effort} cache={cache} filler={filler} {c.get('model')}"
 
 
 def percentile(values: Sequence[float], q: float) -> float | None:
@@ -125,6 +127,9 @@ class ArmReport:
     llm_ttft: list[float] = field(default_factory=list)
     tool_ttft: list[float] = field(default_factory=list)
     first_speech: list[float] = field(default_factory=list)
+    first_answer: list[float] = field(default_factory=list)
+    filler_turns: int = 0
+    turns: int = 0
     usage: list[dict[str, Any]] = field(default_factory=list)
     model: str = ""
 
@@ -166,15 +171,19 @@ def summarize(entries: Iterable[dict[str, Any]]) -> dict[str, ArmReport]:
         for g in entry.get("generations", []):
             if not g.get("llm_requests") or g.get("ttft_s") is None:
                 continue  # a fixed message, or nothing came
-            if g.get("text_s") is not None:
+            if g.get("text_s") is not None and not g.get("filler"):
                 r.llm_ttft.append(g["ttft_s"])
-            elif g.get("tools"):
+            elif g.get("tools"):  # started with a tool call (only the code filler spoken)
                 r.tool_ttft.append(g["ttft_s"])
-        r.first_speech += [
-            t["first_speech_s"]
-            for t in entry.get("turns", [])
-            if t.get("llm_requests") and t.get("first_speech_s") is not None
+        turns = [t for t in entry.get("turns", []) if t.get("llm_requests")]
+        r.first_speech += [t["first_speech_s"] for t in turns if t["first_speech_s"] is not None]
+        r.first_answer += [
+            t.get("first_answer_s", t["first_speech_s"])  # no filler before: the same
+            for t in turns
+            if t.get("first_answer_s", t["first_speech_s"]) is not None
         ]
+        r.filler_turns += sum(bool(t.get("filler")) for t in turns)
+        r.turns += len(turns)
         r.usage += entry.get("llm_usage", [])
     return reports
 
@@ -206,6 +215,8 @@ def render(report: ArmReport) -> str:
         f"llm_ttft: {_ms(r.llm_ttft)}",
         f"time to tool call: {_ms(r.tool_ttft)}",
         f"caller line to first speech: {_ms(r.first_speech)}",
+        f"caller line to answer: {_ms(r.first_answer)}",
+        f"turns with the code filler: {r.filler_turns}/{r.turns}",
         f"LLM requests: {len(r.usage)}, tokens: prompt {tokens['prompt_tokens']} "
         f"(cached {tokens['prompt_cached_tokens']}), completion {tokens['completion_tokens']} "
         f"(reasoning {tokens['reasoning_tokens']})",

@@ -26,8 +26,9 @@ from livekit.agents import (
 )
 
 from praxis_telefon.agent.claim_gate import FilterContext, SentenceFilter, filter_claims
-from praxis_telefon.agent.prompts import build_instructions
+from praxis_telefon.agent.prompts import TOOL_FILLER, build_instructions
 from praxis_telefon.agent.speech_lock import lock_current_speech
+from praxis_telefon.agent.tool_filler import ToolFiller, said_since_caller
 from praxis_telefon.agent.tool_service import ToolService
 from praxis_telefon.safety.call_state import (
     Action,
@@ -159,11 +160,14 @@ class Receptionist(Agent):
         transcript nor the chat history.
         """
         ctx = FilterContext.from_chat(chat_ctx, today_sentence(self._service.now()))
+        filler = ToolFiller(TOOL_FILLER[ctx.language], allowed=not said_since_caller(chat_ctx))
 
         first = SentenceFilter(ctx, "first")
         stream = Agent.default.llm_node(self, chat_ctx, tools, model_settings)
         async for out in filter_claims(stream, first):
             yield out
+        if (phrase := filler.after(first)) is not None:
+            yield phrase
         if not first.needs_retry():
             return
 
@@ -177,6 +181,8 @@ class Receptionist(Agent):
         stream = Agent.default.llm_node(self, retry_ctx, tools, model_settings)
         async for out in filter_claims(stream, second):
             yield out
+        if (phrase := filler.after(second)) is not None:
+            yield phrase
         if second.needs_retry():
             reasons = second.blocked
             record = {"event": "speech_fallback", "reason": reasons[0]}  # reason only

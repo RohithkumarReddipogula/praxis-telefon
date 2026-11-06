@@ -44,6 +44,7 @@ from praxis_telefon.agent.speech_filters import (
     detect_language,
     is_new_or_existing_question,
 )
+from praxis_telefon.agent.tool_filler import is_tool_filler
 from praxis_telefon.agent.tool_service import ToolService
 from praxis_telefon.db.schema import connect
 from praxis_telefon.db.seed import seed
@@ -127,15 +128,17 @@ async def timed(
     stream: AsyncIterable[Output],
     record: dict[str, Any],
     clock: Callable[[], float] = time.perf_counter,
+    is_filler: Callable[[str], bool] = lambda _: False,
 ) -> AsyncIterator[Output]:
     """Pass the stream through and note in ``record`` when output came.
 
     ``ttft_s``: first text or tool call, measured like LiveKit's llm_node_ttft (the
-    turn log's llm_ttft_s). ``text_s``: first text, i.e. the first spoken words.
-    ``tools``: tool calls in order.
+    turn log's llm_ttft_s). ``text_s``: first text, i.e. the first spoken words (the
+    code filler included). ``answer_s``: first text that is not the filler.
+    ``filler``: the code filler was said. ``tools``: tool calls in order.
     """
     start = clock()
-    record.update(_start=start, ttft_s=None, text_s=None, tools=[])
+    record.update(_start=start, ttft_s=None, text_s=None, answer_s=None, filler=False, tools=[])
     async for out in stream:
         text = ""
         calls: list[llm.FunctionToolCall] = []
@@ -145,11 +148,17 @@ async def timed(
             text = out.delta.content or ""
             calls = list(out.delta.tool_calls)
         now = clock()
-        if (text or calls) and record["ttft_s"] is None:
+        spoken = text.strip()
+        if (spoken or calls) and record["ttft_s"] is None:
             record["ttft_s"] = round(now - start, 3)
-        if text and record["text_s"] is None:
+        if spoken and record["text_s"] is None:
             record["text_s"] = round(now - start, 3)
             record["_text_at"] = now
+        if spoken and is_filler(spoken):
+            record["filler"] = True
+        elif spoken and record["answer_s"] is None:
+            record["answer_s"] = round(now - start, 3)
+            record["_answer_at"] = now
         record["tools"] += [c.name for c in calls]
         yield out
 
@@ -166,7 +175,8 @@ class TimedReceptionist(Receptionist):
         record: dict[str, Any] = {}
         before = _llm_requests[0]
         try:
-            async for out in timed(super().llm_node(chat_ctx, tools, model_settings), record):
+            stream = super().llm_node(chat_ctx, tools, model_settings)
+            async for out in timed(stream, record, is_filler=is_tool_filler):
                 yield out
         finally:
             record["llm_requests"] = _llm_requests[0] - before  # 0: a fixed message
@@ -210,10 +220,14 @@ def _measure_llm(model: Any) -> None:
 
 
 def turn_record(generations: list[dict[str, Any]], start: float) -> dict[str, Any]:
-    """Time from the caller's line to the first spoken text, over the turn's runs."""
+    """Time from the caller's line to the first spoken text (the filler counts) and to
+    the first answer (text that is not the filler), over the turn's runs."""
     texts = [g["_text_at"] for g in generations if "_text_at" in g]
+    answers = [g["_answer_at"] for g in generations if "_answer_at" in g]
     return {
         "first_speech_s": round(min(texts) - start, 3) if texts else None,
+        "first_answer_s": round(min(answers) - start, 3) if answers else None,
+        "filler": any(g.get("filler") for g in generations),
         "llm_requests": sum(g.get("llm_requests", 0) for g in generations),
     }
 
@@ -406,6 +420,7 @@ def converse(
         reasoning_effort=settings.llm_reasoning_effort,
         tool_docs=TOOL_DOCS,
         prompt_cache="on" if "cache_control" in main.openrouter_body("probe") else "off",
+        tool_filler="on",  # agent/tool_filler.py; runs before it have no such key
     )
     calls = [Call() for _ in steps]
 

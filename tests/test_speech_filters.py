@@ -17,11 +17,14 @@ from datetime import datetime
 import pytest
 from livekit.agents import llm
 
+from praxis_telefon.agent.prompts import TOOL_FILLER
 from praxis_telefon.agent.receptionist import Receptionist
 from praxis_telefon.agent.tool_service import ToolService
 from praxis_telefon.db.schema import PRACTICE_TZ
 from tests.conftest import NOW
 from tests.test_claim_gate import ScriptedLLM, _install, _reply, _words
+
+FILLER = TOOL_FILLER["de"] + " "  # agent/tool_filler.py: a tool call, nothing spoken
 
 FRIDAY_10 = datetime(2026, 11, 13, 10, 0, tzinfo=PRACTICE_TZ)
 
@@ -60,7 +63,7 @@ def test_spoken_reasoning_before_tool_call_is_dropped(
     )
     _install(monkeypatch, fake)
     text, calls = _reply(agent, "Hallo, Max Mustermann. Haben Sie nächsten Dienstag etwas frei?")
-    assert text == ""
+    assert text == FILLER  # the dropped sentence is not spoken; the code filler is
     assert calls == ["find_slots"]
     assert len(fake.contexts) == 1  # the tool call follows: no retry needed
 
@@ -103,7 +106,7 @@ def test_german_request_narration_is_dropped(
     fake = ScriptedLLM([*_words(f"{narration} "), ("tool", "find_slots")])
     _install(monkeypatch, fake)
     text, calls = _reply(agent, "Geht es am zwölften November?")
-    assert text == ""
+    assert text == FILLER  # the dropped sentence is not spoken; the code filler is
     assert calls == ["find_slots"]
 
 
@@ -197,7 +200,7 @@ def test_self_computed_weekday_before_find_slots_is_dropped(
     fake = ScriptedLLM([*_words("Morgen ist Samstag. "), ("tool", "find_slots")])
     _install(monkeypatch, fake)
     text, calls = _reply(friday_agent, "Haben Sie morgen einen Termin?")
-    assert text == ""
+    assert text == FILLER  # the dropped sentence is not spoken; the code filler is
     assert calls == ["find_slots"]
 
 
@@ -239,7 +242,7 @@ def test_month_from_todays_date_does_not_back_a_self_computed_date(
     fake = ScriptedLLM([*_words("Übermorgen wäre der 11. November. "), ("tool", "find_slots")])
     _install(monkeypatch, fake)
     text, calls = _reply(agent, "Haben Sie übermorgen einen Termin frei?")
-    assert text == ""
+    assert text == FILLER  # the dropped sentence is not spoken; the code filler is
     assert calls == ["find_slots"]
 
 
