@@ -1,0 +1,216 @@
+"""Compare live-test runs of the reasoning-leak experiment (M3 Part B, step 1).
+
+Input: JSONL files the live tests write with LIVE_CORPUS=<path> (tests/live/conftest.py).
+Entries are grouped into arms by their config: tool descriptions, reasoning effort, model.
+
+Per arm:
+- pass rate;
+- sentences blocked as meta talk, per 75 tests, by reason;
+- narration before a tool, in any language: every sentence the LLM wrote in a reply that
+  then called a tool. The "language" check only sees English in a German call, so German
+  narration would pass it; the ones the filters let through, other than a short "one
+  moment" preamble, are listed for review;
+- retries and fixed fallback sentences;
+- llm_ttft (as in the turn log: replies that spoke), time to a tool call, and time from
+  the caller's line to the first spoken text; p50 and p90;
+- tokens and estimated cost (OpenRouter's dashboard is the reference).
+
+    uv run python -m eval.leak_report eval/results/*.jsonl
+"""
+
+from __future__ import annotations
+
+import json
+import math
+import re
+import sys
+from collections import Counter
+from collections.abc import Iterable, Sequence
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+from praxis_telefon.agent.claim_gate import FilterContext, SentenceFilter
+
+# USD per million tokens: (input, cache read, cache write, output). OpenRouter listing,
+# 2026-11-06, prompts under 100k tokens.
+PRICES: dict[str, tuple[float, float, float, float]] = {
+    "anthropic/claude-haiku-5.5": (0.10, 0.01, 0.125, 0.50),
+}
+
+# A short "one moment" before a tool is allowed (system prompt, "# Stil").
+_PREAMBLE = re.compile(
+    r"\b(einen moment|moment bitte|ich schaue (kurz |gleich |mal )?nach|ich sehe nach|"
+    r"one moment|just a moment|let me (just )?check|i'?ll (just )?check)\b",
+    re.I,
+)
+_PREAMBLE_MAX_WORDS = 8
+
+
+def is_preamble(sentence: str) -> bool:
+    return bool(_PREAMBLE.search(sentence)) and len(sentence.split()) <= _PREAMBLE_MAX_WORDS
+
+
+def arm_of(entry: dict[str, Any]) -> str:
+    c = entry.get("config") or {}
+    if not c:
+        return "unknown"
+    return f"tools={c.get('tool_docs')} reasoning={c.get('reasoning_effort')} {c.get('model')}"
+
+
+def percentile(values: Sequence[float], q: float) -> float | None:
+    """Nearest-rank percentile; None without values."""
+    if not values:
+        return None
+    ordered = sorted(values)
+    return ordered[max(0, math.ceil(q * len(ordered)) - 1)]
+
+
+def released(group: dict[str, Any]) -> list[str]:
+    """Sentences of the group the filters let through (replayed as in the live run)."""
+    sf = SentenceFilter(FilterContext.from_json(group["ctx"]), group["stage"])
+    out: list[str] = []
+    for sentence in group["sentences"]:
+        out += sf.push(sentence)
+    sf.finish()
+    return out
+
+
+def cost_usd(usage: Iterable[dict[str, Any]], model: str) -> float | None:
+    if model not in PRICES:
+        return None
+    p_in, p_read, p_write, p_out = PRICES[model]
+    total = 0.0
+    for u in usage:
+        read, write = u.get("prompt_cached_tokens", 0), u.get("cache_creation_tokens", 0)
+        fresh = max(0, u.get("prompt_tokens", 0) - read - write)
+        total += fresh * p_in + read * p_read + write * p_write
+        total += u.get("completion_tokens", 0) * p_out
+    return total / 1_000_000
+
+
+@dataclass
+class ArmReport:
+    arm: str
+    tests: int = 0
+    passed: int = 0
+    blocked: Counter[str] = field(default_factory=Counter)
+    retries: int = 0
+    fallbacks: int = 0
+    pre_tool_sentences: int = 0
+    pre_tool_preambles: int = 0
+    pre_tool_blocked: int = 0
+    pre_tool_review: list[tuple[str, str, list[str]]] = field(default_factory=list)
+    llm_ttft: list[float] = field(default_factory=list)
+    tool_ttft: list[float] = field(default_factory=list)
+    first_speech: list[float] = field(default_factory=list)
+    usage: list[dict[str, Any]] = field(default_factory=list)
+    model: str = ""
+
+    @property
+    def meta_blocked(self) -> int:
+        return sum(n for reason, n in self.blocked.items() if reason.startswith("meta:"))
+
+    def per_75(self, n: int) -> float:
+        return 75 * n / self.tests if self.tests else 0.0
+
+    def cost(self) -> float | None:
+        return cost_usd(self.usage, self.model)
+
+
+def summarize(entries: Iterable[dict[str, Any]]) -> dict[str, ArmReport]:
+    reports: dict[str, ArmReport] = {}
+    for entry in entries:
+        arm = arm_of(entry)
+        r = reports.setdefault(arm, ArmReport(arm))
+        r.model = (entry.get("config") or {}).get("model", "")
+        r.tests += 1
+        r.passed += entry["outcome"] == "passed"
+        r.blocked.update(entry.get("blocked", []))
+        r.fallbacks += len(entry.get("fallbacks", []))
+        test = entry["test"].split("::")[-1]
+        for group in entry.get("groups", []):
+            r.retries += group["stage"] == "retry"
+            if not group.get("tool_calls"):
+                continue
+            spoken = released(group)
+            for sentence in group["sentences"]:
+                r.pre_tool_sentences += 1
+                if sentence not in spoken:
+                    r.pre_tool_blocked += 1
+                elif is_preamble(sentence):
+                    r.pre_tool_preambles += 1
+                else:
+                    r.pre_tool_review.append((test, sentence.strip(), group["tool_calls"]))
+        for g in entry.get("generations", []):
+            if not g.get("llm_requests") or g.get("ttft_s") is None:
+                continue  # a fixed message, or nothing came
+            if g.get("text_s") is not None:
+                r.llm_ttft.append(g["ttft_s"])
+            elif g.get("tools"):
+                r.tool_ttft.append(g["ttft_s"])
+        r.first_speech += [
+            t["first_speech_s"]
+            for t in entry.get("turns", [])
+            if t.get("llm_requests") and t.get("first_speech_s") is not None
+        ]
+        r.usage += entry.get("llm_usage", [])
+    return reports
+
+
+def _ms(values: Sequence[float]) -> str:
+    p50, p90 = percentile(values, 0.5), percentile(values, 0.9)
+    if p50 is None or p90 is None:
+        return "n/a"
+    return f"p50 {p50 * 1000:.0f} ms, p90 {p90 * 1000:.0f} ms (n={len(values)})"
+
+
+def render(report: ArmReport) -> str:
+    r = report
+    tokens = Counter[str]()
+    for u in r.usage:
+        tokens.update({k: u.get(k, 0) for k in ("prompt_tokens", "prompt_cached_tokens")})
+        tokens.update({k: u.get(k, 0) for k in ("completion_tokens", "reasoning_tokens")})
+    cost = r.cost()
+    reasons = ", ".join(f"{k} {v}" for k, v in sorted(r.blocked.items())) or "none"
+    lines = [
+        f"== {r.arm}",
+        f"tests: {r.passed}/{r.tests} passed",
+        f"meta blocked: {r.meta_blocked} ({r.per_75(r.meta_blocked):.1f} per 75 tests)",
+        f"all blocked: {reasons}",
+        f"retries: {r.retries}, fallbacks: {r.fallbacks}",
+        f"before a tool: {r.pre_tool_sentences} sentences, {r.pre_tool_blocked} blocked, "
+        f"{r.pre_tool_preambles} preambles, {len(r.pre_tool_review)} passed for review "
+        f"({r.per_75(r.pre_tool_sentences - r.pre_tool_preambles):.1f} non-preamble per 75)",
+        f"llm_ttft: {_ms(r.llm_ttft)}",
+        f"time to tool call: {_ms(r.tool_ttft)}",
+        f"caller line to first speech: {_ms(r.first_speech)}",
+        f"LLM requests: {len(r.usage)}, tokens: prompt {tokens['prompt_tokens']} "
+        f"(cached {tokens['prompt_cached_tokens']}), completion {tokens['completion_tokens']} "
+        f"(reasoning {tokens['reasoning_tokens']})",
+        "estimated cost: " + (f"${cost:.3f}" if cost is not None else "unknown model price"),
+    ]
+    lines += [
+        f"  review [{test}] -> {','.join(tools)}: {s}" for test, s, tools in r.pre_tool_review
+    ]
+    return "\n".join(lines)
+
+
+def load(paths: Iterable[Path]) -> list[dict[str, Any]]:
+    entries = []
+    for path in paths:
+        entries += [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+    return entries
+
+
+def main(argv: Sequence[str]) -> int:
+    if not argv:
+        print(__doc__)
+        return 2
+    for report in summarize(load(Path(a) for a in argv)).values():
+        print(render(report), end="\n\n")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

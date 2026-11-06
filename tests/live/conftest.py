@@ -1,6 +1,10 @@
 """Live-test reporting: with LIVE_CORPUS=<path>, each test appends one JSON line with its
-outcome, every sentence the LLM produced (before filtering, with the filter context),
-and the reasons the filters blocked. Synthetic data only."""
+outcome, every sentence the LLM produced (before filtering, with the filter context and
+the tools that reply called), the reasons the filters blocked, and the experiment
+measurements (config, timings, token counts; see harness.py). Synthetic data only.
+
+Experiment arms: LIVE_TOOL_DOCS=de|en and LLM_REASONING_EFFORT=none|low in the
+environment (it overrides .env); eval/leak_report.py compares the files."""
 
 from __future__ import annotations
 
@@ -15,7 +19,7 @@ from tests.live import harness
 
 @pytest.fixture(autouse=True)
 def _fresh_buffers() -> Iterator[None]:
-    harness.CORPUS.clear()
+    harness.clear_measurements()
     harness.safety_records().clear()
     yield
 
@@ -37,9 +41,13 @@ def _write_entry(item: pytest.Item, report: pytest.TestReport) -> None:
     entry = {
         "test": item.nodeid,
         "outcome": report.outcome,
-        "groups": list(harness.CORPUS.values()),
+        "config": dict(harness.CONFIG),
+        "groups": harness.corpus_groups(),
         "blocked": [r["reason"] for r in records if r.get("event") == "speech_blocked"],
         "fallbacks": [r["reason"] for r in records if r.get("event") == "speech_fallback"],
+        "generations": [harness.public(g) for g in harness.GENERATIONS],
+        "turns": list(harness.TURNS),
+        "llm_usage": list(harness.LLM_USAGE),
     }
     with open(path, "a", encoding="utf-8") as f:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")

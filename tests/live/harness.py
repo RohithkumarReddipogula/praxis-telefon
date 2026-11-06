@@ -4,6 +4,11 @@ Runs against an in-memory synthetic database with a fixed clock (Monday 9 Novemb
 07:00 Berlin). The scripted caller answers what the agent asks: a slot choice when
 slots are offered, "Ja" to a confirmation, its name and date of birth when asked
 (counted as ``identity_asked``).
+
+For the leak experiment (eval/leak_report.py) every test also records, with LIVE_CORPUS
+set: the config (model, reasoning effort, LIVE_TOOL_DOCS), per llm_node run its time to
+first output and which tools it called, per caller turn the time to the first spoken
+text, and per LLM request the token counts. Timings and counts only, never text.
 """
 
 from __future__ import annotations
@@ -15,12 +20,14 @@ import logging
 import os
 import re
 import sqlite3
-from collections.abc import Awaitable, Callable
+import time
+from collections.abc import AsyncIterable, AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
-from livekit.agents import AgentSession
+from livekit.agents import AgentSession, FlushSentinel, ModelSettings, llm
+from livekit.agents.metrics import LLMMetrics
 from livekit.agents.voice.run_result import (
     ChatMessageEvent,
     FunctionCallEvent,
@@ -67,10 +74,14 @@ _safety_logger.setLevel(logging.INFO)
 # Every sentence the LLM produced, before filtering, grouped per filter run. Collected
 # only when LIVE_CORPUS is set; tests/live/conftest.py writes it with the test outcome.
 CORPUS: dict[int, dict[str, Any]] = {}
+# The filter of each group, kept alive so id() stays unique within a test, and read at
+# the end for the tools that reply called.
+_FILTERS: dict[int, claim_gate.SentenceFilter] = {}
 
 
 def _collect(sf: claim_gate.SentenceFilter, sentence: str) -> None:
     group = CORPUS.setdefault(id(sf), {"stage": sf.stage, "ctx": sf.ctx.to_json(), "sentences": []})
+    _FILTERS[id(sf)] = sf
     group["sentences"].append(sentence)
 
 
@@ -78,8 +89,132 @@ if os.environ.get("LIVE_CORPUS"):
     claim_gate.SENTENCE_HOOK = _collect
 
 
+def corpus_groups() -> list[dict[str, Any]]:
+    """The sentence groups, each with the tools its reply called (after the sentences)."""
+    return [{**g, "tool_calls": sorted(_FILTERS[k].tool_calls)} for k, g in CORPUS.items()]
+
+
 def safety_records() -> list[dict[str, Any]]:
     return _SAFETY_LOG.records
+
+
+# --- experiment measurements -------------------------------------------------------------
+
+# "de": the production tool descriptions; "en": the English ones from before 2026-11-06.
+TOOL_DOCS = os.environ.get("LIVE_TOOL_DOCS", "de")
+CONFIG: dict[str, str] = {}  # model, reasoning effort, tool descriptions of this run
+GENERATIONS: list[dict[str, Any]] = []  # one per llm_node run
+TURNS: list[dict[str, Any]] = []  # one per caller line
+LLM_USAGE: list[dict[str, Any]] = []  # one per LLM request
+_llm_requests = [0]  # LLM requests started so far
+
+
+def clear_measurements() -> None:
+    for buffer in (CORPUS, _FILTERS, GENERATIONS, TURNS, LLM_USAGE):
+        buffer.clear()
+
+
+def public(record: dict[str, Any]) -> dict[str, Any]:
+    """The record without its internal keys (absolute clock readings)."""
+    return {k: v for k, v in record.items() if not k.startswith("_")}
+
+
+Output = llm.ChatChunk | str | FlushSentinel
+
+
+async def timed(
+    stream: AsyncIterable[Output],
+    record: dict[str, Any],
+    clock: Callable[[], float] = time.perf_counter,
+) -> AsyncIterator[Output]:
+    """Pass the stream through and note in ``record`` when output came.
+
+    ``ttft_s``: first text or tool call, measured like LiveKit's llm_node_ttft (the
+    turn log's llm_ttft_s). ``text_s``: first text, i.e. the first spoken words.
+    ``tools``: tool calls in order.
+    """
+    start = clock()
+    record.update(_start=start, ttft_s=None, text_s=None, tools=[])
+    async for out in stream:
+        text = ""
+        calls: list[llm.FunctionToolCall] = []
+        if isinstance(out, str):
+            text = out
+        elif isinstance(out, llm.ChatChunk) and out.delta is not None:
+            text = out.delta.content or ""
+            calls = list(out.delta.tool_calls)
+        now = clock()
+        if (text or calls) and record["ttft_s"] is None:
+            record["ttft_s"] = round(now - start, 3)
+        if text and record["text_s"] is None:
+            record["text_s"] = round(now - start, 3)
+            record["_text_at"] = now
+        record["tools"] += [c.name for c in calls]
+        yield out
+
+
+class TimedReceptionist(Receptionist):
+    """The production agent; each llm_node run is timed into GENERATIONS."""
+
+    async def llm_node(
+        self,
+        chat_ctx: llm.ChatContext,
+        tools: list[llm.Tool],
+        model_settings: ModelSettings,
+    ) -> AsyncIterable[Output]:
+        record: dict[str, Any] = {}
+        before = _llm_requests[0]
+        try:
+            async for out in timed(super().llm_node(chat_ctx, tools, model_settings), record):
+                yield out
+        finally:
+            record["llm_requests"] = _llm_requests[0] - before  # 0: a fixed message
+            GENERATIONS.append(record)
+
+
+def agent_class() -> type[Receptionist]:
+    if TOOL_DOCS == "en":
+        from tests.live.english_tools import EnglishToolDocsReceptionist
+
+        return EnglishToolDocsReceptionist
+    if TOOL_DOCS != "de":
+        raise ValueError("LIVE_TOOL_DOCS must be de or en")
+    return TimedReceptionist
+
+
+def _usage(m: LLMMetrics) -> dict[str, Any]:
+    keys = (
+        "prompt_tokens",
+        "prompt_cached_tokens",
+        "cache_creation_tokens",
+        "completion_tokens",
+        "reasoning_tokens",
+        "ttft",
+        "duration",
+        "cancelled",
+    )
+    return {k: getattr(m, k) for k in keys}
+
+
+def _measure_llm(model: Any) -> None:
+    """Count LLM requests as they start and keep each request's token counts."""
+    chat = model.chat
+
+    def counting_chat(*args: Any, **kwargs: Any) -> Any:
+        _llm_requests[0] += 1
+        return chat(*args, **kwargs)
+
+    model.chat = counting_chat
+    model.on("metrics_collected", lambda m: LLM_USAGE.append(_usage(m)))
+
+
+def turn_record(generations: list[dict[str, Any]], start: float) -> dict[str, Any]:
+    """Time from the caller's line to the first spoken text, over the turn's runs."""
+    texts = [g["_text_at"] for g in generations if "_text_at" in g]
+    return {
+        "first_speech_s": round(min(texts) - start, 3) if texts else None,
+        "llm_requests": sum(g.get("llm_requests", 0) for g in generations),
+    }
 
 
 RUNS = 3
@@ -265,20 +400,30 @@ def converse(
 
     load_dotenv()
     settings = Settings.from_env()
+    CONFIG.update(
+        model=settings.llm_model,
+        reasoning_effort=settings.llm_reasoning_effort,
+        tool_docs=TOOL_DOCS,
+    )
     calls = [Call() for _ in steps]
 
     async def run() -> None:
-        llm = openai.LLM.with_openrouter(**main.llm_options(settings), api_key=settings.llm_api_key)
-        async with llm, AgentSession(llm=llm) as session:
-            agent = Receptionist(ToolService(conn, clock or (lambda: NOW)))
+        model = openai.LLM.with_openrouter(
+            **main.llm_options(settings), api_key=settings.llm_api_key
+        )
+        _measure_llm(model)
+        async with model, AgentSession(llm=model) as session:
+            agent = agent_class()(ToolService(conn, clock or (lambda: NOW)))
             await session.start(agent)
             if setup is not None:
                 await setup(session, agent)
 
             async def say(call: Call, text: str) -> None:
                 mark = len(_SAFETY_LOG.records)
+                first_generation, start = len(GENERATIONS), time.perf_counter()
                 pending: RunResult[None] = session.run(user_input=text)
                 result = await asyncio.wait_for(_wait(pending), TURN_TIMEOUT_S)
+                TURNS.append(turn_record(GENERATIONS[first_generation:], start))
                 call.events.extend(result.events)
                 for record in _SAFETY_LOG.records[mark:]:
                     if record.get("event") in ("speech_blocked", "speech_fallback"):

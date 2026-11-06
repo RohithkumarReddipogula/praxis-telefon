@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import asyncio
+from collections.abc import AsyncIterator
+from typing import Any
+
 import pytest
 from livekit.agents import llm
 from livekit.agents.voice.run_result import ChatMessageEvent
 
-from tests.live.harness import Call, caller_reply
+from tests.live.harness import Call, caller_reply, public, timed, turn_record
 
 
 def _call_after(agent_text: str) -> Call:
@@ -99,3 +103,51 @@ def test_caller_answers_identity_questions_in_both_languages(question: str, answ
     call = _call_after(question)
     assert caller_reply(call, "Max Mustermann") == answer
     assert call.identity_asked == 1
+
+
+# --- experiment timings ------------------------------------------------------------------
+
+
+def _chunk(content: str | None = None, tool: str | None = None) -> llm.ChatChunk:
+    calls = [llm.FunctionToolCall(name=tool, arguments="{}", call_id="c1")] if tool else []
+    return llm.ChatChunk(id="x", delta=llm.ChoiceDelta(content=content, tool_calls=calls))
+
+
+def _run_timed(outputs: list[Any], clock_values: list[float]) -> dict[str, Any]:
+    async def stream() -> AsyncIterator[Any]:
+        for out in outputs:
+            yield out
+
+    clock = iter(clock_values)
+    record: dict[str, Any] = {}
+
+    async def consume() -> list[Any]:
+        return [o async for o in timed(stream(), record, clock=lambda: next(clock))]
+
+    assert asyncio.run(consume()) == outputs  # passed through unchanged
+    return record
+
+
+def test_timed_notes_first_output_and_first_text() -> None:
+    # Tool call first (ttft), then text (the first spoken words), like LiveKit's ttft.
+    record = _run_timed(
+        [_chunk(), _chunk(tool="find_slots"), "Einen Moment."], [10.0, 10.1, 10.4, 11.0]
+    )
+    assert record["ttft_s"] == 0.4
+    assert record["text_s"] == 1.0
+    assert record["tools"] == ["find_slots"]
+    assert record["_text_at"] == 11.0
+
+
+def test_timed_without_output() -> None:
+    record = _run_timed([_chunk()], [5.0, 5.2])
+    assert record["ttft_s"] is None and record["text_s"] is None and record["tools"] == []
+
+
+def test_turn_record_takes_the_first_text_of_the_turn() -> None:
+    generations: list[dict[str, Any]] = [
+        {"ttft_s": 0.5, "text_s": None, "tools": ["find_slots"], "llm_requests": 1},
+        {"ttft_s": 0.3, "text_s": 0.3, "tools": [], "llm_requests": 1, "_text_at": 102.5},
+    ]
+    assert turn_record(generations, 100.0) == {"first_speech_s": 2.5, "llm_requests": 2}
+    assert public(generations[1]) == {"ttft_s": 0.3, "text_s": 0.3, "tools": [], "llm_requests": 1}
