@@ -230,6 +230,28 @@ def test_todays_weekday_is_known(
     assert text == reply
 
 
+def test_month_from_todays_date_does_not_back_a_self_computed_date(
+    agent: Receptionist, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Regression (leak experiment arm C, uebermorgen, 6 of 15 runs): "Übermorgen wäre der
+    # 11. November." before find_slots was spoken, because today's date sentence
+    # ("Heute ist Montag, der 9. November 2026") counted as naming November.
+    fake = ScriptedLLM([*_words("Übermorgen wäre der 11. November. "), ("tool", "find_slots")])
+    _install(monkeypatch, fake)
+    text, calls = _reply(agent, "Haben Sie übermorgen einen Termin frei?")
+    assert text == ""
+    assert calls == ["find_slots"]
+
+
+def test_month_the_caller_named_is_spoken(
+    agent: Receptionist, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    reply = "Gern, einen Moment, ich schaue für den zwölften November nach. "
+    _install(monkeypatch, ScriptedLLM([*_words(reply), ("tool", "find_slots")]))
+    text, _ = _reply(agent, "Geht es am zwölften November?")
+    assert text == reply
+
+
 # --- at most one retry per reply, across all filters ----------------------------------
 
 

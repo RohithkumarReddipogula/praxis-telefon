@@ -111,7 +111,7 @@ def check_sentence(sentence: str, ctx: FilterContext) -> list[str]:
         ctx.intent_asked or any(mentions_wanted_day(t) for t in ctx.caller_texts)
     ):
         reasons.append("intent")
-    if unsourced_days(sentence, (*ctx.caller_texts, *ctx.tool_texts, ctx.today)):
+    if unsourced_days(sentence, (*ctx.caller_texts, *ctx.tool_texts), ctx.today):
         reasons.append("weekday")
     return reasons
 

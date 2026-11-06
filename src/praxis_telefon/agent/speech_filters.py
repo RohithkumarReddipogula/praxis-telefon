@@ -322,7 +322,16 @@ def _without_birth_dates(sentence: str) -> str:
     return "".join(out)
 
 
-def unsourced_days(sentence: str, sources: Iterable[str]) -> set[str]:
-    """Days in the sentence that neither the caller, a tool result nor today's date named."""
+_WEEKDAYS = frozenset(_WEEKDAY_NAMES.values())
+
+
+def unsourced_days(sentence: str, sources: Iterable[str], today: str = "") -> set[str]:
+    """Days in the sentence that neither the caller nor a tool result named.
+
+    Today's date sentence backs only today's weekday ("Heute ist Freitag"), not its month:
+    "Übermorgen wäre der 11. November" before find_slots is a date the LLM worked out,
+    even though today's sentence says November (leak experiment, arm C, uebermorgen).
+    """
     named = set().union(*(day_names(s) for s in sources))
+    named |= day_names(today) & _WEEKDAYS
     return day_names(_without_birth_dates(sentence)) - named
