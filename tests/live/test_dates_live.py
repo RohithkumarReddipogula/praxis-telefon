@@ -18,14 +18,17 @@ import pytest
 
 from praxis_telefon.db.schema import PRACTICE_TZ
 from tests.live.harness import (
+    ERIKA,
     MAX,
     RUNS,
     Call,
     Step,
+    agent_texts,
     converse,
     count,
     new_db,
     ok,
+    self_computed_days,
     tool_arguments,
     tool_outputs,
     transcript_of,
@@ -35,7 +38,6 @@ pytestmark = pytest.mark.live
 
 FRIDAY_10 = datetime(2026, 11, 13, 10, 0, tzinfo=PRACTICE_TZ)
 ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
-
 # (caller line, expected start of the find_slots result, clock)
 CASES: dict[str, tuple[str, str, datetime | None]] = {
     "morgen_vormittag": (
@@ -109,6 +111,9 @@ def test_relative_date_resolved_in_code(case: str, run: int) -> None:
     assert outputs, info
     assert outputs[0].startswith(expected), info
     assert not any(ISO_DATE.search(w) for w in _when_args(calls[0])), info
+    # Regression (friday_tomorrow_closed-0): a wanted day means a new appointment.
+    assert calls[0].intent_asked == 0, "asked new or existing\n" + info
+    assert self_computed_days(calls[0], line) == set(), info
 
 
 @pytest.mark.parametrize("run", range(RUNS))
@@ -129,3 +134,49 @@ def test_booking_lands_on_the_resolved_day(run: int) -> None:
     day = datetime.fromisoformat(booked["start_utc"]).astimezone(PRACTICE_TZ)
     assert (day.date().isoformat(), day.hour < 12) == ("2026-11-10", True), info
     assert count(conn, "SELECT count(*) FROM bookings") == 1, info
+
+
+# --- new vs existing appointment (regression: explicit_date[1] called find_booking) -----
+
+
+@pytest.mark.parametrize("run", range(RUNS))
+def test_availability_question_searches_slots(run: int) -> None:
+    conn, _ = new_db(erika_booked=False)
+
+    calls = converse(
+        conn,
+        MAX,
+        [
+            Step(
+                (f"Hallo, {MAX}. Haben Sie am zwölften November noch einen Termin frei?",),
+                until=ok("find_slots"),
+            )
+        ],
+    )
+
+    info = transcript_of(calls)
+    assert calls[0].calls("find_booking") == 0, info
+    assert calls[0].intent_asked == 0, "asked new or existing\n" + info
+    outputs = tool_outputs(calls[0], "find_slots")
+    assert outputs and outputs[0].startswith("Gesucht: Donnerstag, 12. November."), info
+
+
+@pytest.mark.parametrize("run", range(RUNS))
+def test_own_appointment_question_looks_up_the_booking(run: int) -> None:
+    conn, _ = new_db(erika_booked=True)  # Erika is booked on Tuesday 10 November, 9:00
+
+    calls = converse(
+        conn,
+        ERIKA,
+        [
+            Step(
+                (f"Guten Tag, hier ist {ERIKA}. Habe ich am Dienstag einen Termin?",),
+                until=ok("find_booking"),
+            )
+        ],
+    )
+
+    info = transcript_of(calls)
+    assert calls[0].succeeded("find_booking") >= 1, info
+    assert calls[0].calls("find_slots") == 0, info
+    assert any("Dienstag" in t for t in agent_texts(calls[0])), info
