@@ -3,7 +3,7 @@ outcome, every sentence the LLM produced (before filtering, with the filter cont
 the tools that reply called), the reasons the filters blocked, and the experiment
 measurements (config, timings, token counts; see harness.py). Synthetic data only.
 
-Experiment arms: LIVE_TOOL_DOCS=de|en and LLM_REASONING_EFFORT=none|low in the
+Experiment arms: LIVE_TOOL_DOCS=production|en and LLM_REASONING_EFFORT=none|low in the
 environment (it overrides .env); eval/leak_report.py compares the files."""
 
 from __future__ import annotations

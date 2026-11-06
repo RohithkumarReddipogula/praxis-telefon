@@ -1,9 +1,10 @@
 """The tool descriptions in English, as they were before 2026-11-06, for the leak experiment.
 
-M3 Part B step 1 compares English and German tool descriptions (LIVE_TOOL_DOCS=en|de).
-Production has only the German ones (praxis_telefon/agent/receptionist.py). This agent
-is the timed live-test agent with the six tools overridden: same names, parameters and
-bodies, English descriptions only (tests/test_tool_descriptions.py checks that).
+M3 Part B step 1 compared English and German tool descriptions (arms A/B used this copy,
+LIVE_TOOL_DOCS=en; docs/experiments/reasoning-leak.md). German was not adopted, so
+production (praxis_telefon/agent/receptionist.py) has the same English text again. This
+agent is the timed live-test agent with the six tools overridden: same names,
+parameters, bodies and descriptions; kept so the experiment's arms can be rerun.
 """
 
 from __future__ import annotations

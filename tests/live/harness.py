@@ -99,8 +99,10 @@ def safety_records() -> list[dict[str, Any]]:
 
 # --- experiment measurements -------------------------------------------------------------
 
-# "de": the production tool descriptions; "en": the English ones from before 2026-11-06.
-TOOL_DOCS = os.environ.get("LIVE_TOOL_DOCS", "de")
+# "production": the agent as shipped. "en": the English copy used as arms A/B of the leak
+# experiment (docs/experiments/reasoning-leak.md); since the decision it equals production.
+# Arms C/D used German descriptions, which were not adopted.
+TOOL_DOCS = os.environ.get("LIVE_TOOL_DOCS", "production")
 CONFIG: dict[str, str] = {}  # model, reasoning effort, tool descriptions of this run
 GENERATIONS: list[dict[str, Any]] = []  # one per llm_node run
 TURNS: list[dict[str, Any]] = []  # one per caller line
@@ -176,8 +178,8 @@ def agent_class() -> type[Receptionist]:
         from tests.live.english_tools import EnglishToolDocsReceptionist
 
         return EnglishToolDocsReceptionist
-    if TOOL_DOCS != "de":
-        raise ValueError("LIVE_TOOL_DOCS must be de or en")
+    if TOOL_DOCS != "production":
+        raise ValueError("LIVE_TOOL_DOCS must be production or en")
     return TimedReceptionist
 
 
