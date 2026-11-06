@@ -77,7 +77,10 @@ class BookingNotActive(ToolFailure):
 
 class InvalidCallbackNumber(ToolFailure):
     code = "invalid_callback_number"
-    message = "Die Rückrufnummer ist ungültig. Bitte eine deutsche Telefonnummer angeben."
+    message = (
+        "Die Rückrufnummer ist ungültig. callback_number nur als Ziffern übergeben, also "
+        "030 statt null drei null, und eine deutsche Telefonnummer verwenden."
+    )
 
 
 class InvalidReasonCategory(ToolFailure):

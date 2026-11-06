@@ -231,7 +231,8 @@ class Receptionist(Agent):
 
         Args:
             caller_name: Caller's first and last name.
-            callback_number: German phone number for the callback.
+            callback_number: German phone number for the callback, as digits, e.g.
+                "030 23125456". Spoken digits are converted, but digits are preferred.
             reason_category: Category of the request; never record symptoms.
         """
         return _run(

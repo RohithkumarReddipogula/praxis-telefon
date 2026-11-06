@@ -274,3 +274,13 @@ def test_date_errors_never_echo_the_phrase(service: ToolService) -> None:
     with pytest.raises(errors.DateNotUnderstood) as exc:
         service.find_slots("wenn Quellenberg Zeit hat", "any", None)
     assert "Quellenberg" not in str(exc.value)
+
+
+def test_spoken_number_duplicate_is_recognised(
+    conn: sqlite3.Connection, service: ToolService
+) -> None:
+    # Regression (live test human_request[1]): spoken digits are the same number.
+    service.take_message(PII_NAME, PII_PHONE, "callback")
+    spoken = "null drei null, zwei drei eins zwei fünf, vier fünf sechs"
+    assert "bereits gespeichert" in service.take_message(PII_NAME, spoken, "callback")
+    assert _message_count(conn) == 1

@@ -10,6 +10,7 @@ from typing import Literal
 
 from praxis_telefon.db.schema import to_utc_iso
 from praxis_telefon.tools.errors import InvalidCallbackNumber, InvalidReasonCategory
+from praxis_telefon.tools.spoken_numbers import spoken_to_digits
 from praxis_telefon.tools.validation import clean_name, require_aware
 
 ReasonCategory = Literal[
@@ -36,6 +37,11 @@ class MessageResult:
 
 
 def normalize_callback_number(raw: str) -> str:
+    """Digits only, +49 kept. Spoken digits ("null drei null ...") are converted first."""
+    try:
+        raw = spoken_to_digits(raw)
+    except ValueError:
+        raise InvalidCallbackNumber() from None
     number = _SEPARATORS.sub("", raw)
     if number.startswith("0049"):
         number = "+49" + number[4:]

@@ -66,3 +66,59 @@ def test_invalid_name(conn: sqlite3.Connection) -> None:
         take_message(
             conn, now=NOW, caller_name="Erika", callback_number=PHONE, reason_category="other"
         )
+
+
+# --- regression: spoken callback number (live test human_request[1], 2026-11-06) --------
+# The LLM passed "null drei null, zwei drei eins zwei fünf, vier fünf sechs", got
+# invalid_callback_number and kept asking for the number without saving.
+
+
+@pytest.mark.parametrize(
+    ("spoken", "normalized"),
+    [
+        ("null drei null, zwei drei eins zwei fünf, vier fünf sechs", "03023125456"),
+        ("Null Drei Null Zwei Drei Eins Zwei Fuenf Vier Fuenf Sechs", "03023125456"),
+        (
+            "null dreißig, dreiundzwanzig, eins fünfundzwanzig, vierhundertsechsundfünfzig",
+            "03023125456",
+        ),
+        ("null drei null zwo drei eins zwo fünf vier fünf sechs", "03023125456"),
+        ("null drei null, zwei drei eins zwei fünf, doppel fünf sechs", "030231255 56"),
+        ("030 zwei drei eins zwei fünf 456", "03023125456"),
+        ("plus vier neun drei null zwei drei eins zwei fünf vier fünf sechs", "+493023125456"),
+        ("zero three zero, two three one two five, four five six", "03023125456"),
+        ("oh three oh two three one two five four five six", "03023125456"),
+        ("zero thirty, twenty three, one twenty five, four fifty six", "03023125456"),
+        ("zero three zero two three one two five four double five", "0302312545 5"),
+        ("plus four nine three zero two three one two five four five six", "+493023125456"),
+    ],
+)
+def test_spoken_callback_number_is_converted_to_digits(spoken: str, normalized: str) -> None:
+    assert normalize_callback_number(spoken) == normalized.replace(" ", "")
+
+
+def test_take_message_accepts_spoken_number(conn: sqlite3.Connection) -> None:
+    result = take_message(
+        conn,
+        now=NOW,
+        caller_name=NAME,
+        callback_number="null drei null, zwei drei eins zwei fünf, vier fünf sechs",
+        reason_category="callback",
+    )
+    row = conn.execute(
+        "SELECT callback_number FROM staff_messages WHERE id = ?", (result.message_id,)
+    ).fetchone()
+    assert row["callback_number"] == "03023125456"
+
+
+@pytest.mark.parametrize(
+    "raw", ["null drei null bitte rufen sie an", "zwei drei", "my number is unknown", "null drei"]
+)
+def test_spoken_number_with_other_words_or_too_short_is_invalid(raw: str) -> None:
+    with pytest.raises(errors.InvalidCallbackNumber):
+        normalize_callback_number(raw)
+
+
+def test_invalid_number_message_asks_for_digits() -> None:
+    message = errors.InvalidCallbackNumber.message
+    assert "Ziffern" in message
