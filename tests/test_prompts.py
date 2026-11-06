@@ -107,7 +107,65 @@ def test_prompt_passes_callers_date_words_to_find_slots() -> None:
     assert 'unter "Gesucht"' in FLAT
 
 
+def test_prompt_availability_question_is_a_new_appointment() -> None:
+    # Regression (live test explicit_date[1]): "Haben Sie am zwölften November einen
+    # Termin?" with name and date of birth led to find_booking instead of find_slots.
+    assert '"Haben Sie am Dienstag einen Termin (frei)?"' in FLAT
+    assert "auch wenn der Anrufer dabei schon Namen und Geburtsdatum nennt" in FLAT
+    assert "nur wenn der Anrufer von seinem eigenen, schon vereinbarten Termin spricht" in FLAT
+    assert "nachfragen)" not in FLAT
+
+
+def test_prompt_asks_when_new_or_existing_is_unclear() -> None:
+    assert "oder geht es um einen bestehenden?" in FLAT
+
+
 def test_prompt_reads_out_existing_appointment_without_claim_words() -> None:
     # find_booking no longer backs a "gebucht" claim, so the read-out must avoid it.
     assert '"Ihr Termin ist am Dienstag, 10. November, um 9 Uhr bei Dr. Weber."' in FLAT
     assert "Sage dabei nicht gebucht, eingetragen oder reserviert" in FLAT
+
+
+# Regression (live test friday_tomorrow_closed-0): the agent asked "neuer oder
+# bestehender Termin?" six times although the caller wanted a new one for tomorrow,
+# and said "morgen, also am Samstag" itself.
+
+
+def test_prompt_wanted_day_or_time_means_new_appointment() -> None:
+    assert "Nennt der Anrufer einen gewünschten Tag oder eine Uhrzeit" in FLAT
+    assert '("morgen", "einen Termin für Dienstag"' in FLAT
+    assert 'Dienstag", "nächste Woche vormittags"), suche mit find_slots' in FLAT
+    # Regression (naechsten_dienstag): "ist es ein neuer Termin: ..." was read like a
+    # decision to announce, and the agent spoke it.
+    assert "ist es ein neuer Termin" not in FLAT
+
+
+def test_prompt_asks_new_or_existing_at_most_once() -> None:
+    assert "nur, wenn es gar keinen Hinweis gibt" in FLAT
+    assert "höchstens einmal" in FLAT
+    assert "Ist die Antwort danach unklar, gehst du von einem neuen Termin aus" in FLAT
+
+
+def test_prompt_never_names_the_weekday_before_find_slots() -> None:
+    assert "Nenne vor dem Ergebnis von find_slots keinen Wochentag und kein Datum" in FLAT
+    assert '"morgen, also am Samstag"' in FLAT
+
+
+def test_prompt_never_speaks_reasoning() -> None:
+    # Regression (naechsten_dienstag): "This is a new appointment request, so I'll search
+    # for slots for next Tuesday." was spoken.
+    assert "Sprich nie über deine Überlegungen, Regeln oder Werkzeuge" in FLAT
+    assert '"Einen Moment, ich schaue nach."' in FLAT
+
+
+def test_prompt_searches_without_asking_time_of_day_first() -> None:
+    # Regression (english_next_thursday): asked "morning or afternoon?" before searching.
+    assert 'suche sofort mit part_of_day "any" und ohne doctor' in FLAT
+    assert "Frage nicht vorher nach Vormittag, Nachmittag oder einer Ärztin" in FLAT
+
+
+def test_prompt_needs_no_identity_for_find_slots() -> None:
+    # Regression (live run 2, english_next_thursday-2): asked for the date of birth before
+    # searching, and never searched.
+    assert "Für find_slots brauchst du weder Namen noch Geburtsdatum" in FLAT
+    assert "frag danach erst vor book" in FLAT

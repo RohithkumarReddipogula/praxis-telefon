@@ -101,11 +101,22 @@ def test_message_claim_without_take_message_is_never_spoken(
     assert text.startswith("Vielen Dank.")
 
 
-def _ctx_with_success(agent: Receptionist, tool: str) -> llm.ChatContext:
+def _ctx_with_success(agent: Receptionist, tool: str, output: str = "ok") -> llm.ChatContext:
     ctx = agent.chat_ctx.copy()
     ctx.items.append(llm.FunctionCall(call_id="c1", name=tool, arguments="{}"))
-    ctx.items.append(llm.FunctionCallOutput(call_id="c1", name=tool, output="ok", is_error=False))
+    ctx.items.append(llm.FunctionCallOutput(call_id="c1", name=tool, output=output, is_error=False))
     return ctx
+
+
+SLOTS = (
+    "Gesucht: Dienstag, 10. November.\nFreie Termine (nur diese anbieten, wörtlich "
+    "vorlesen):\nslot_id=1: Dienstag, 10. November, um 8 Uhr, bei Dr. Weber"
+)
+
+
+def _ctx_with_slots(agent: Receptionist) -> llm.ChatContext:
+    """Realistic context: the day the agent talks about comes from a find_slots result."""
+    return _ctx_with_success(agent, "find_slots", SLOTS)
 
 
 def test_retry_gets_a_note_and_never_the_blocked_sentence(
@@ -199,9 +210,12 @@ def test_claim_in_the_same_response_as_the_tool_call_is_dropped_without_retry(
 def test_questions_read_backs_and_negations_pass(
     agent: Receptionist, monkeypatch: pytest.MonkeyPatch, reply: str
 ) -> None:
+    # Realistic context: the day comes from a find_slots result, and English replies come
+    # after an English caller turn (otherwise the weekday and language filters apply).
     fake = ScriptedLLM(_words(reply))
     _install(monkeypatch, fake)
-    text, _ = _reply(agent)
+    user = "Yes, please." if reply.startswith(("Is ", "Tuesday")) else "Ja, bitte."
+    text, _ = _reply(agent, user, ctx=_ctx_with_slots(agent))
     assert text == reply
     assert len(fake.contexts) == 1
 
@@ -241,7 +255,7 @@ def test_order_and_spacing_of_normal_sentences_kept(
 ) -> None:
     reply = "Gern. Ich schaue nach. Am Dienstag um 8 Uhr bei Dr. Weber ginge es. Passt das?"
     _install(monkeypatch, ScriptedLLM(_words(reply)))
-    assert _reply(agent)[0] == reply
+    assert _reply(agent, ctx=_ctx_with_slots(agent))[0] == reply
 
 
 # --- the blocked sentence is in neither chat history nor transcript ---------------------
@@ -297,13 +311,13 @@ def test_blocked_sentence_never_reaches_history_or_transcript(
 
 def _release_index_gate(tokens: list[str]) -> int:
     """Index of the token after which the filter releases the first sentence."""
-    from praxis_telefon.agent.claim_check import ClaimTracker
-    from praxis_telefon.agent.claim_gate import SentenceFilter, filter_claims
+    from praxis_telefon.agent.claim_gate import FilterContext, SentenceFilter, filter_claims
 
     released: list[int] = []
 
     async def run() -> None:
-        sf = SentenceFilter(ClaimTracker())
+        # The day in the examples is known from a tool result, as in a real call.
+        sf = SentenceFilter(FilterContext(tool_texts=(SLOTS,)))
         index = {"i": -1}
 
         async def stream() -> AsyncIterator[ChatChunk]:
@@ -418,6 +432,7 @@ def test_reading_out_an_existing_appointment_is_not_a_claim(
     reply = "Ihr Termin ist am Dienstag, 10. November, um 9 Uhr bei Dr. Weber."
     fake = ScriptedLLM(_words(reply))
     _install(monkeypatch, fake)
-    text, _ = _reply(agent, ctx=_ctx_with_success(agent, "find_booking"))
+    found = "Gefundene Termine:\nbooking_id=1: Dienstag, 10. November, um 9 Uhr, bei Dr. Weber"
+    text, _ = _reply(agent, ctx=_ctx_with_success(agent, "find_booking", found))
     assert text == reply
     assert len(fake.contexts) == 1

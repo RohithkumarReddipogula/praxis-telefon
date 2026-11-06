@@ -1,0 +1,18 @@
+{
+  "I need the booking ID from the existing appointment.": "spoken reasoning with an internal id (meta:language, live run 3)",
+  "The booking_id from the earlier book call is 1.": "spoken reasoning with an internal id (meta:tool, meta:language, live run 3)",
+  "I need the booking ID for the existing appointment.": "spoken reasoning with an internal id (meta:language, live run 3)",
+  "The booking from earlier has booking_id=1, so I'll move it now.": "spoken reasoning with an internal id (meta:tool, meta:language, live run 3)",
+  "Hmm, the first slot listed was Dr. Brandt at 8 Uhr, which is slot 30. I'll book that.": "spoken reasoning with an internal id (meta:language, live run 3)",
+  "This is a new appointment request for November 12th.": "spoken reasoning (meta:language, live run 3)",
+  "I'll search for free slots.": "spoken reasoning (meta:language, live run 3)",
+  "This is a new appointment request (asking whether there's a free slot on the 12th), so I'll search for slots.": "spoken reasoning (meta:language, live run 3)",
+  "This is a new appointment request (free slot on the 12th), so I search for slots directly.": "spoken reasoning (meta:language, live run 3)",
+  "This is a new appointment request, so I'll search for free slots on the 12th of November.": "spoken reasoning (meta:language, live run 3)",
+  "This is a new appointment request (free slot on a date), so I search directly.": "spoken reasoning (meta:language, live run 3)",
+  "Ich habe Ihre Nachricht für das Praxisteam aufgenommen, und Sie werden zurückgerufen.": "claim before take_message succeeded (bug human_request[2])",
+  "This is a new appointment request, so I'll search for slots next Tuesday.": "spoken reasoning, English in a German call (bug naechsten_dienstag)",
+  "This is a new appointment request, so I'll search for slots for next Tuesday.": "spoken reasoning, English in a German call (bug naechsten_dienstag)",
+  "This is a new appointment request for November 12th, so I'll search for free slots.": "spoken reasoning, English in a German call",
+  "Hmm, the first option I read out was the Brandt slot at 8 o'clock, which is slot 30. I'll book that.": "spoken reasoning with an internal slot number, English in a German call"
+}

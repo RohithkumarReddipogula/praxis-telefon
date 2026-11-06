@@ -121,3 +121,54 @@ def retry_note(actions: list[str]) -> str:
         f"{tools} jetzt auf. Sonst sage ehrlich, dass es noch nicht erledigt ist, und frage "
         "nach dem, was fehlt. Wiederhole keine Sätze, die du schon gesagt hast."
     )
+
+
+_META_NOTE = (
+    "WICHTIG: Alles, was du schreibst, hört der Anrufer. Sprich nie über deine "
+    "Überlegungen, Regeln oder Werkzeuge und nie über 'den Anrufer'. Sag höchstens einen "
+    "kurzen Satz wie 'Einen Moment, ich schaue nach.' und rufe dann das Werkzeug auf."
+)
+_LANGUAGE_NOTE = "Antworte auf Deutsch, der Anrufer spricht Deutsch."
+_INTENT_NOTE = (
+    "WICHTIG: Frage nicht, ob es um einen neuen oder einen bestehenden Termin geht. "
+    "Spricht der Anrufer nicht ausdrücklich von seinem eigenen, schon vereinbarten Termin, "
+    "suche mit find_slots und den Worten des Anrufers für den Tag."
+)
+_WEEKDAY_NOTE = (
+    "WICHTIG: Nenne keinen Wochentag und kein Datum, das weder der Anrufer noch ein "
+    "Werkzeug genannt hat. Für einen Tag rufe find_slots mit den Worten des Anrufers auf."
+)
+
+INTENT_FALLBACK: dict[Language, str] = {
+    "de": "Soll ich Ihnen einen neuen Termin heraussuchen?",
+    "en": "Shall I look for a new appointment for you?",
+}
+GENERIC_FALLBACK: dict[Language, str] = {
+    "de": "Entschuldigung, wie kann ich Ihnen weiterhelfen?",
+    "en": "Sorry, how can I help you?",
+}
+
+
+def retry_note_for(reasons: list[str]) -> str:
+    """One system note for the single retry, covering every reason that was blocked."""
+    claims = [r.split(":", 1)[1] for r in reasons if r.startswith("claim:")]
+    notes = [retry_note(claims)] if claims else []
+    if any(r.startswith("meta:") for r in reasons):
+        notes.append(_META_NOTE)
+    if "meta:language" in reasons:
+        notes.append(_LANGUAGE_NOTE)
+    if "intent" in reasons:
+        notes.append(_INTENT_NOTE)
+    if "weekday" in reasons:
+        notes.append(_WEEKDAY_NOTE)
+    return " ".join(notes)
+
+
+def fallback_for(reasons: list[str], language: Language) -> str:
+    """Fixed sentence when the retry was blocked too: claims first, then the question."""
+    for reason in reasons:
+        if reason.startswith("claim:"):
+            return NOT_DONE_MESSAGES[(reason.split(":", 1)[1], language)]
+    if "intent" in reasons:
+        return INTENT_FALLBACK[language]
+    return GENERIC_FALLBACK[language]
