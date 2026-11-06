@@ -1,7 +1,8 @@
 """Compare live-test runs of the reasoning-leak experiment (M3 Part B, step 1).
 
 Input: JSONL files the live tests write with LIVE_CORPUS=<path> (tests/live/conftest.py).
-Entries are grouped into arms by their config: tool descriptions, reasoning effort, model.
+Entries are grouped into arms by their config: tool descriptions, reasoning effort, prompt
+cache, model.
 
 Per arm:
 - pass rate;
@@ -74,7 +75,8 @@ def arm_of(entry: dict[str, Any]) -> str:
     c = entry.get("config") or {}
     if not c:
         return "unknown"
-    return f"tools={c.get('tool_docs')} reasoning={c.get('reasoning_effort')} {c.get('model')}"
+    tools, effort, cache = c.get("tool_docs"), c.get("reasoning_effort"), c.get("prompt_cache")
+    return f"tools={tools} reasoning={effort} cache={cache} {c.get('model')}"
 
 
 def percentile(values: Sequence[float], q: float) -> float | None:
@@ -218,8 +220,19 @@ def render(report: ArmReport) -> str:
 def load(paths: Iterable[Path]) -> list[dict[str, Any]]:
     entries = []
     for path in paths:
-        entries += [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+        lines = path.read_text(encoding="utf-8").splitlines()
+        entries += with_cache_flag([json.loads(line) for line in lines])
     return entries
+
+
+def with_cache_flag(run: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Files from before config.prompt_cache: the run was cached if any request hit."""
+    hit = any(u.get("prompt_cached_tokens") for e in run for u in e.get("llm_usage", []))
+    for entry in run:
+        config = entry.get("config")
+        if config and "prompt_cache" not in config:
+            config["prompt_cache"] = "on" if hit else "off"
+    return run
 
 
 def main(argv: Sequence[str]) -> int:

@@ -1,6 +1,13 @@
 """Session wiring checks that need no network, keys or model downloads."""
 
+import asyncio
+import json
 from pathlib import Path
+from typing import Any
+
+import httpx2 as httpx  # what openai and the LiveKit plugin use
+from livekit.agents import llm
+from openai import AsyncClient
 
 from praxis_telefon.agent import main
 from praxis_telefon.config import Settings
@@ -30,20 +37,85 @@ def test_stt_follows_default_language() -> None:
     assert main.stt_options(settings(DEFAULT_LANGUAGE="en"))["language"] == "en"
 
 
+def _request_sent(s: Settings, *, session_id: str | None = None) -> httpx.Request:
+    """The HTTP request build_llm's LLM sends for one reply (mock transport, no network)."""
+    sent: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        sent.append(request)
+        chunk = {
+            "id": "c1",
+            "object": "chat.completion.chunk",
+            "created": 0,
+            "model": s.llm_model,
+            "choices": [
+                {
+                    "index": 0,
+                    "delta": {"role": "assistant", "content": "Hallo"},
+                    "finish_reason": "stop",
+                }
+            ],
+        }
+        body = f"data: {json.dumps(chunk)}\n\ndata: [DONE]\n\n"
+        return httpx.Response(200, headers={"content-type": "text/event-stream"}, text=body)
+
+    client = AsyncClient(
+        api_key="sk-test-fake",
+        base_url=main.OPENROUTER_URL,
+        http_client=httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+    )
+    model = main.build_llm(s, session_id=session_id, client=client)
+
+    async def reply() -> None:
+        ctx = llm.ChatContext()
+        ctx.add_message(role="user", content="Haben Sie morgen einen Termin frei?")
+        async with model.chat(chat_ctx=ctx) as stream:
+            async for _ in stream:
+                pass
+
+    asyncio.run(reply())
+    assert len(sent) == 1
+    return sent[0]
+
+
+def _body(request: httpx.Request) -> dict[str, Any]:
+    body: dict[str, Any] = json.loads(request.content)
+    return body
+
+
 def test_llm_reasoning_effort_is_passed() -> None:
     # Regression: no effort was sent, so Gemini reasoned at "medium" (llm_ttft 6.8 s).
-    assert main.llm_options(settings())["reasoning_effort"] == "low"
-    assert main.llm_options(settings(LLM_REASONING_EFFORT="none"))["reasoning_effort"] == "none"
+    assert _body(_request_sent(settings()))["reasoning_effort"] == "low"
+    none = _body(_request_sent(settings(LLM_REASONING_EFFORT="none")))
+    assert none["reasoning_effort"] == "none"
 
 
 def test_openrouter_prefers_latency_and_denies_data_collection() -> None:
-    provider = main.llm_options(settings())["provider"]
-    assert provider["sort"] == "latency"
-    assert provider["data_collection"] == "deny"
+    body = _body(_request_sent(settings()))
+    assert body["model"] == "google/gemini-3.8-flash"
+    assert body["provider"] == {"sort": "latency", "data_collection": "deny"}
 
 
-def test_llm_options_do_not_contain_api_key() -> None:
-    assert "sk-test-fake" not in repr(main.llm_options(settings()))
+def test_prompt_caching_is_requested() -> None:
+    # Arm A live run 2026-11-06: 0 of 1,268,848 prompt tokens came from the cache.
+    body = _body(_request_sent(settings()))
+    assert body["cache_control"] == {"type": "ephemeral"}
+
+
+def test_each_call_gets_its_own_random_session_id() -> None:
+    # Sticky routing keeps a call on the provider that holds its cache.
+    assert _body(_request_sent(settings(), session_id="call-1"))["session_id"] == "call-1"
+    first = _body(_request_sent(settings()))["session_id"]
+    second = _body(_request_sent(settings()))["session_id"]
+    assert first != second
+    assert len(first) == 32 and int(first, 16) >= 0  # uuid4 hex, no caller data
+
+
+def test_request_names_the_app_and_keeps_the_key_out_of_the_body() -> None:
+    request = _request_sent(settings())
+    assert request.headers["X-Title"] == "Praxis-Telefon"
+    assert request.url.host == "openrouter.ai"
+    assert b"sk-test-fake" not in request.content
 
 
 def test_endpointing_tuned_for_phone() -> None:

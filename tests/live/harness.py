@@ -35,7 +35,6 @@ from livekit.agents.voice.run_result import (
     RunEvent,
     RunResult,
 )
-from livekit.plugins import openai
 
 from praxis_telefon.agent import claim_gate, main
 from praxis_telefon.agent.claim_check import ClaimTracker
@@ -404,13 +403,12 @@ def converse(
         model=settings.llm_model,
         reasoning_effort=settings.llm_reasoning_effort,
         tool_docs=TOOL_DOCS,
+        prompt_cache="on" if "cache_control" in main.openrouter_body("probe") else "off",
     )
     calls = [Call() for _ in steps]
 
     async def run() -> None:
-        model = openai.LLM.with_openrouter(
-            **main.llm_options(settings), api_key=settings.llm_api_key
-        )
+        model = main.build_llm(settings)  # one random session_id per test call
         _measure_llm(model)
         async with model, AgentSession(llm=model) as session:
             agent = agent_class()(ToolService(conn, clock or (lambda: NOW)))

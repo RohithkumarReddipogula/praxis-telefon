@@ -5,7 +5,15 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-from eval.leak_report import arm_of, cost_usd, is_preamble, percentile, render, summarize
+from eval.leak_report import (
+    arm_of,
+    cost_usd,
+    is_preamble,
+    percentile,
+    render,
+    summarize,
+    with_cache_flag,
+)
 
 from praxis_telefon.agent.claim_gate import FilterContext
 
@@ -134,3 +142,16 @@ def test_cost_with_cache_reads() -> None:
     # 1000 fresh * 0.10 + 4000 cached * 0.01 + 100 out * 0.50, per million
     assert cost_usd(usage, "anthropic/claude-haiku-5.5") == pytest.approx(0.00019)
     assert cost_usd(usage, "other/model") is None
+
+
+def test_runs_without_cache_flag_are_told_apart_by_cache_hits() -> None:
+    # Arm A run 1 (no caching) and the cached check run had the same config otherwise.
+    def run(cached: int) -> list[dict[str, Any]]:
+        usage = [{"prompt_tokens": 5000, "prompt_cached_tokens": cached}]
+        return [_entry(config=dict(CONFIG), llm_usage=usage)]
+
+    uncached, cached = with_cache_flag(run(0)), with_cache_flag(run(4000))
+    assert "cache=off" in arm_of(uncached[0])
+    assert "cache=on" in arm_of(cached[0])
+    flagged = [_entry(config={**CONFIG, "prompt_cache": "on"}, llm_usage=[])]
+    assert "cache=on" in arm_of(with_cache_flag(flagged)[0])

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import logging
+import uuid
 from datetime import datetime
 from typing import Any
 
@@ -25,6 +26,7 @@ from livekit.agents.llm import ChatMessage
 from livekit.agents.voice.turn import EndpointingOptions, InterruptionOptions
 from livekit.plugins import deepgram, elevenlabs, openai, silero
 from livekit.plugins.openai.models import OpenRouterProviderPreferences
+from openai import AsyncClient
 
 from praxis_telefon.agent.claim_check import ClaimTracker
 from praxis_telefon.agent.console_audio import release_console_audio
@@ -39,6 +41,8 @@ from praxis_telefon.logging_privacy import install_pii_filter
 
 logger = logging.getLogger("praxis_telefon.turns")
 
+OPENROUTER_URL = "https://openrouter.ai/api/v1"
+APP_NAME = "Praxis-Telefon"
 ELEVENLABS_MODEL = "eleven_flash_v2_5"
 DEEPGRAM_MODEL = "nova-3"
 
@@ -80,13 +84,33 @@ def openrouter_provider() -> OpenRouterProviderPreferences:
     return {"sort": "latency", "data_collection": "deny"}
 
 
-def llm_options(settings: Settings) -> dict[str, Any]:
+def openrouter_body(session_id: str) -> dict[str, Any]:
+    """OpenRouter fields beyond the OpenAI API, sent with every request of the call."""
     return {
-        "model": settings.llm_model,
-        "reasoning_effort": settings.llm_reasoning_effort,
         "provider": openrouter_provider(),
-        "app_name": "Praxis-Telefon",
+        # Automatic prompt caching (Anthropic): the cache breakpoint sits at the end of
+        # each request, so a turn reads all the previous turn sent (tools, system
+        # prompt, history) at 0.1x the input price; 5 minutes TTL, writes 1.25x.
+        "cache_control": {"type": "ephemeral"},
+        # Sticky routing from the first request on: later turns of the call go to the
+        # provider that holds the cache. Random per call, no caller data.
+        "session_id": session_id,
     }
+
+
+def build_llm(
+    settings: Settings, *, session_id: str | None = None, client: AsyncClient | None = None
+) -> openai.LLM:
+    """The LLM for one call, via OpenRouter. ``client`` is for tests only."""
+    return openai.LLM(
+        model=settings.llm_model,
+        api_key=settings.llm_api_key,
+        base_url=OPENROUTER_URL,
+        client=client,
+        reasoning_effort=settings.llm_reasoning_effort,
+        extra_body=openrouter_body(session_id or uuid.uuid4().hex),
+        extra_headers={"X-Title": APP_NAME},
+    )
 
 
 def turn_handling_options() -> TurnHandlingOptions:
@@ -101,7 +125,7 @@ def turn_handling_options() -> TurnHandlingOptions:
 def build_session(settings: Settings) -> AgentSession[Any]:
     return AgentSession(
         stt=deepgram.STT(**stt_options(settings), api_key=settings.deepgram_api_key),
-        llm=openai.LLM.with_openrouter(**llm_options(settings), api_key=settings.llm_api_key),
+        llm=build_llm(settings),
         tts=elevenlabs.TTS(
             voice_id=settings.elevenlabs_voice_id,
             model=ELEVENLABS_MODEL,

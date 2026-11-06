@@ -5,6 +5,7 @@ heuristic (keyword-based); the proper scored eval set comes in M2.
 """
 
 import re
+import uuid
 
 import pytest
 
@@ -35,12 +36,11 @@ def _reply(text: str) -> str:
 
     load_dotenv()
     settings = Settings.from_env()
-    opts = main.llm_options(settings)
-    client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=settings.llm_api_key)
+    client = OpenAI(base_url=main.OPENROUTER_URL, api_key=settings.llm_api_key)
     resp = client.chat.completions.create(
-        model=opts["model"],
-        reasoning_effort=opts["reasoning_effort"],
-        extra_body={"provider": opts["provider"]},
+        model=settings.llm_model,
+        reasoning_effort=settings.llm_reasoning_effort,
+        extra_body=main.openrouter_body(uuid.uuid4().hex),
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": text},
