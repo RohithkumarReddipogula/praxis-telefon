@@ -30,6 +30,7 @@ def _entry(**overrides: Any) -> dict[str, Any]:
                     "This is a new appointment request, so I'll search for slots. ",
                     "Einen Moment, ich schaue nach. ",
                     "Das ist eine neue Terminanfrage, also suche ich freie Termine. ",
+                    "Sie möchten also einen Termin für übermorgen. ",
                 ],
             },
             {"stage": "first", "ctx": CTX, "tool_calls": [], "sentences": ["Gern. "]},
@@ -56,12 +57,12 @@ def test_summary_counts_narration_before_tools_in_any_language() -> None:
     report = summarize([_entry()])[arm_of(_entry())]
     assert report.tests == 1 and report.passed == 1
     assert report.meta_blocked == 1
-    assert report.pre_tool_sentences == 3
-    assert report.pre_tool_blocked == 1  # the English one
+    assert report.pre_tool_sentences == 4
+    assert report.pre_tool_blocked == 2  # the English one and the German narration
     assert report.pre_tool_preambles == 1
-    # German narration passes the filters today; it is listed for review.
+    # What the filters let through and is not a preamble is listed for review.
     assert [s for _, s, _ in report.pre_tool_review] == [
-        "Das ist eine neue Terminanfrage, also suche ich freie Termine."
+        "Sie möchten also einen Termin für übermorgen."
     ]
 
 
@@ -84,7 +85,7 @@ def test_render_mentions_the_review_sentence() -> None:
     text = render(summarize([_entry()])[arm_of(_entry())])
     assert "1/1 passed" in text
     assert "75.0 per 75 tests" in text
-    assert "Terminanfrage" in text
+    assert "übermorgen" in text
 
 
 @pytest.mark.parametrize(
@@ -93,6 +94,24 @@ def test_render_mentions_the_review_sentence() -> None:
         ("Einen Moment, ich schaue nach.", True),
         ("One moment, let me check.", True),
         ("Gerne, ich schaue nach.", True),
+        # Arm A (2026-11-06): listed for review by the first check, but fine.
+        ("Guten Tag, Herr Mustermann.", True),
+        ("Einen Moment, ich suche Ihnen einen Termin für morgen Vormittag.", True),
+        ("Guten Tag Herr Mustermann, einen Moment, ich suche Termine in zwei Wochen.", True),
+        ("Ich suche Ihnen gern einen Termin in zwei Wochen.", True),
+        ("Hello Herr Mustermann, I'd be happy to check.", True),
+        ("Let me look for appointments next Thursday.", True),
+        ("Vielen Dank, Herr Mustermann.", True),
+        # Cached check run (2026-11-06): listed for review, but fine.
+        ("One moment, please.", True),
+        ("Einen Moment, bitte.", True),
+        ("Ich nehme die Nachricht jetzt auf.", True),
+        # Still for review: narration, a restated request, content beyond a preamble.
+        ("Das ist ein Terminwunsch für einen neuen Termin.", False),
+        ("Next Thursday is the one I'll search for.", False),
+        ("Sie möchten also einen Termin für übermorgen.", False),
+        ("Ihr Termin ist am Dienstag, 10. November, um 9 Uhr bei Dr. Weber.", False),
+        ("Ich nehme die Nachricht für das Praxisteam auf, damit man Sie zurückruft.", False),
         (
             "Einen Moment, ich schaue nach, denn das ist eine neue Terminanfrage für Dienstag.",
             False,

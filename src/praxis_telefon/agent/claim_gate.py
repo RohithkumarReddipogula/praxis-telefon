@@ -4,8 +4,9 @@ The LLM's text is cut into sentences as it streams. Each sentence is checked aga
 what is known about the call (``FilterContext``) and dropped if it:
 - claims a saved message, booking, move or cancellation whose tool has not succeeded in
   this call (``claim:<tool>``; bug live test human_request[2]),
-- is the agent talking about itself: its tools, "the caller", a "Hinweis:" note, or
-  English while the caller speaks German (``meta:<why>``; bug naechsten_dienstag),
+- is the agent talking about itself: its tools, "the caller", a "Hinweis:" note,
+  English while the caller speaks German (``meta:<why>``; bug naechsten_dienstag), or
+  German narration about the request (``meta:narration``; live run arm A explicit_date-0),
 - asks "neuer oder bestehender Termin?" although the caller named a day or it was
   already asked (``intent``; bug friday_tomorrow_closed),
 - names a weekday or month that neither the caller, a tool result nor today's date

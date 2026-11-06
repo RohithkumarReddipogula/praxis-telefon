@@ -85,6 +85,44 @@ def test_meta_sentences_are_dropped(
     assert calls == ["find_slots"]
 
 
+@pytest.mark.parametrize(
+    "narration",
+    [
+        # Live run arm A (2026-11-06), explicit_date-0, before find_slots; it was spoken.
+        "Das ist ein Terminwunsch für einen neuen Termin.",
+        "Das ist eine neue Terminanfrage, also suche ich freie Termine.",
+        "Es handelt sich um einen neuen Terminwunsch.",
+        "Dies ist eine Anfrage für einen neuen Termin.",
+        "Der Patient möchte einen Termin, also suche ich direkt.",
+    ],
+)
+def test_german_request_narration_is_dropped(
+    agent: Receptionist, monkeypatch: pytest.MonkeyPatch, narration: str
+) -> None:
+    # German narration passes the "English in a German call" check, so it needs its own.
+    fake = ScriptedLLM([*_words(f"{narration} "), ("tool", "find_slots")])
+    _install(monkeypatch, fake)
+    text, calls = _reply(agent, "Geht es am zwölften November?")
+    assert text == ""
+    assert calls == ["find_slots"]
+
+
+@pytest.mark.parametrize(
+    "sentence",
+    [
+        "Das ist ein Termin am Dienstag um neun Uhr bei Dr. Weber.",
+        "Das ist kein Problem, ich suche Ihnen gern einen Termin.",
+        "Ihren Terminwunsch für Dienstag habe ich verstanden, einen Moment bitte.",
+        "Sie möchten also einen Termin für übermorgen.",
+        "Ich schaue also gleich nach.",
+    ],
+)
+def test_sentences_like_german_narration_are_kept(sentence: str) -> None:
+    from praxis_telefon.agent.speech_filters import meta_reasons
+
+    assert meta_reasons(sentence, "de") == []
+
+
 def test_english_reply_to_an_english_caller_is_spoken(
     agent: Receptionist, monkeypatch: pytest.MonkeyPatch
 ) -> None:

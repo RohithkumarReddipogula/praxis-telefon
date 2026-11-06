@@ -6,6 +6,8 @@ Regressions from the live run on 2026-11-06 (test_dates_live):
 - intent: "Möchten Sie einen neuen Termin für morgen, oder geht es um einen bestehenden
   Termin?" although the caller had named a day.
 - weekday: "Morgen ist Samstag" before find_slots; dates are worked out in code.
+- meta (narration, arm A run): "Das ist ein Terminwunsch für einen neuen Termin." before
+  find_slots, German, so the language check let it through.
 
 All checks are plain functions over one sentence plus what is known about the call.
 """
@@ -186,6 +188,20 @@ _META_NOTE = re.compile(
 )
 
 
+# German narration about the request (live run arm A, explicit_date-0, before find_slots:
+# "Das ist ein Terminwunsch für einen neuen Termin."). The "language" check only sees
+# English in a German call, so German narration needs its own patterns: classifying the
+# request, "also suche ich" (the German "so I'll search"), the caller in third person.
+_REQUEST = r"(?:\w+\s+){0,2}?(?:terminwunsch\w*|terminanfrage\w*|anfrage\w*|anliegen)\b"
+_META_NARRATION = re.compile(
+    rf"^\s*(?:das|dies) ist (?:ein|eine|einen)\s+{_REQUEST}"
+    rf"|^\s*es handelt sich um (?:ein|eine|einen)\s+(?:{_REQUEST}|neuen termin\b)"
+    r"|\b(?:also|daher|deshalb|deswegen|darum) (?:suche|prüfe|rufe|schaue|buche|frage) ich\b"
+    r"|^\s*(?:der patient|die patientin) (?:möchte|will|wünscht|braucht|fragt)\b",
+    _I,
+)
+
+
 def meta_reasons(sentence: str, language: Language) -> list[str]:
     """Why the sentence is the agent talking about itself rather than to the caller."""
     reasons = []
@@ -195,6 +211,8 @@ def meta_reasons(sentence: str, language: Language) -> list[str]:
         reasons.append("caller")
     if _META_NOTE.search(sentence):
         reasons.append("note")
+    if _META_NARRATION.search(sentence):
+        reasons.append("narration")
     if language == "de" and detect_language(sentence) == "en":
         reasons.append("language")
     return reasons

@@ -8,8 +8,8 @@ Per arm:
 - sentences blocked as meta talk, per 75 tests, by reason;
 - narration before a tool, in any language: every sentence the LLM wrote in a reply that
   then called a tool. The "language" check only sees English in a German call, so German
-  narration would pass it; the ones the filters let through, other than a short "one
-  moment" preamble, are listed for review;
+  narration would pass it; the ones the filters let through, other than greetings,
+  thanks and "I'm looking it up" (is_preamble), are listed for review;
 - retries and fixed fallback sentences;
 - llm_ttft (as in the turn log: replies that spoke), time to a tool call, and time from
   the caller's line to the first spoken text; p50 and p90;
@@ -38,17 +38,36 @@ PRICES: dict[str, tuple[float, float, float, float]] = {
     "anthropic/claude-haiku-5.5": (0.10, 0.01, 0.125, 0.50),
 }
 
-# A short "one moment" before a tool is allowed (system prompt, "# Stil").
-_PREAMBLE = re.compile(
-    r"\b(einen moment|moment bitte|ich schaue (kurz |gleich |mal )?nach|ich sehe nach|"
-    r"one moment|just a moment|let me (just )?check|i'?ll (just )?check)\b",
+# What is fine before a tool (system prompt, "# Stil"), clause by clause: a greeting,
+# thanks, an acknowledgement, "einen Moment", or saying what it now looks up. Arm A's
+# first report listed 93 sentences for review, nearly all "Guten Tag, Herr Mustermann."
+# or "Einen Moment, ich suche Ihnen einen Termin für morgen Vormittag."
+_NAME = r"(?: (?:herr|frau|mr|mrs|ms) \w+)?"
+_OK_CLAUSE = re.compile(
+    "^(?:"
+    + "|".join(
+        [
+            rf"(?:guten (?:tag|morgen|abend)|hallo|hello|hi|good (?:morning|afternoon)){_NAME}",
+            rf"(?:vielen dank|danke(?: schön)?|thank you|thanks){_NAME}",
+            rf"(?:gern|gerne|sehr gern|alles klar|in ordnung|okay|sure|of course){_NAME}",
+            r"(?:herr|frau|mr|mrs|ms) \w+",  # "Guten Tag, Herr Mustermann."
+            r"(?:bitte|please)",  # "One moment, please."
+            r"(?:einen moment|moment|one moment|just a moment)(?: bitte| please)?",
+            r"(?:ich )?(?:suche|schaue|sehe|prüfe)\b.*",
+            r"ich nehme (?:die|eine|den|ihre|ihren) (?:nachricht|rückruf)\b.*",
+            r"(?:let me|i'?ll|i will|i can|i'?d be happy to) (?:just )?(?:check|look)\b.*",
+        ]
+    )
+    + ")$",
     re.I,
 )
-_PREAMBLE_MAX_WORDS = 8
 
 
 def is_preamble(sentence: str) -> bool:
-    return bool(_PREAMBLE.search(sentence)) and len(sentence.split()) <= _PREAMBLE_MAX_WORDS
+    """Every clause is a greeting, thanks, acknowledgement or "I'm looking it up"."""
+    clauses = [c.strip(" .!?\"'„“") for c in re.split(r"[,;]", sentence)]
+    clauses = [c for c in clauses if c]
+    return bool(clauses) and all(_OK_CLAUSE.match(c) for c in clauses)
 
 
 def arm_of(entry: dict[str, Any]) -> str:
