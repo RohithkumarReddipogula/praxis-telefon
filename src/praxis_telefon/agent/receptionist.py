@@ -25,6 +25,8 @@ from livekit.agents import (
     llm,
 )
 
+from praxis_telefon.agent.claim_check import BACKED_BY, ClaimTracker
+from praxis_telefon.agent.claim_gate import SentenceFilter, filter_claims
 from praxis_telefon.agent.prompts import build_instructions
 from praxis_telefon.agent.speech_lock import lock_current_speech
 from praxis_telefon.agent.tool_service import ToolService
@@ -37,7 +39,14 @@ from praxis_telefon.safety.call_state import (
     UnrecognizedSpeech,
     replay,
 )
-from praxis_telefon.safety.messages import FIXED_MESSAGES, MODE_NOTES, SUICIDE_NOTE, UNINTERRUPTIBLE
+from praxis_telefon.safety.messages import (
+    FIXED_MESSAGES,
+    MODE_NOTES,
+    NOT_DONE_MESSAGES,
+    SUICIDE_NOTE,
+    UNINTERRUPTIBLE,
+    retry_note,
+)
 from praxis_telefon.tools.errors import ToolFailure
 
 logger = logging.getLogger("praxis_telefon.safety")
@@ -133,8 +142,62 @@ class Receptionist(Agent):
                 note = f"{note} {SUICIDE_NOTE}"
             chat_ctx.add_message(role="system", content=note)
 
-        async for chunk in Agent.default.llm_node(self, chat_ctx, tools, model_settings):
-            yield chunk
+        async for out in self._llm_without_false_claims(chat_ctx, tools, model_settings, state):
+            yield out
+
+    async def _llm_without_false_claims(
+        self,
+        chat_ctx: llm.ChatContext,
+        tools: list[llm.Tool],
+        model_settings: ModelSettings,
+        state: State,
+    ) -> AsyncIterable[llm.ChatChunk | str | FlushSentinel]:
+        """The LLM's reply, minus any sentence claiming an action no tool has done yet.
+
+        Blocked once: retry with a note (the retry may call the tool). Blocked again: a
+        fixed "not saved yet" sentence. A blocked sentence is never yielded, so it is in
+        neither the speech, the transcript nor the chat history. See claim_gate.py.
+        """
+        done = {
+            item.name
+            for item in chat_ctx.items
+            if isinstance(item, llm.FunctionCallOutput) and not item.is_error
+        }
+        tracker = ClaimTracker(done)
+
+        first = SentenceFilter(tracker)
+        stream = Agent.default.llm_node(self, chat_ctx, tools, model_settings)
+        async for out in filter_claims(stream, first):
+            yield out
+        if not first.blocked or self._tool_follows(first):
+            return
+        self._log_claim("claim_blocked", first.blocked)
+
+        retry_ctx = chat_ctx.copy()
+        if first.spoken:
+            retry_ctx.add_message(role="assistant", content="".join(first.spoken).strip())
+        retry_ctx.add_message(role="system", content=retry_note(first.blocked))
+        if first.spoken and not first.spoken[-1][-1:].isspace():
+            yield " "  # keep the retry's first word apart from what was already said
+        second = SentenceFilter(tracker)
+        stream = Agent.default.llm_node(self, retry_ctx, tools, model_settings)
+        async for out in filter_claims(stream, second):
+            yield out
+        if second.blocked and not self._tool_follows(second):
+            self._log_claim("claim_fallback", second.blocked)
+            said = "".join(second.spoken)
+            prefix = " " if said and not said[-1:].isspace() else ""
+            yield prefix + NOT_DONE_MESSAGES[(second.blocked[0], state.language)]
+
+    @staticmethod
+    def _tool_follows(sf: SentenceFilter) -> bool:
+        """The same response calls the claimed tool; the reply after its result confirms."""
+        return any(BACKED_BY[a] & sf.tool_calls for a in sf.blocked)
+
+    def _log_claim(self, event: str, actions: list[str]) -> None:
+        for action in actions:
+            record = {"event": event, "action": action}  # never the sentence itself
+            logger.info(json.dumps(record, separators=(",", ":")))
 
     # --- tools ------------------------------------------------------------------------
 

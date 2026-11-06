@@ -182,6 +182,20 @@ def _assert_no_pii(text: str) -> None:
         assert value not in text, f"leaked {value!r}"
 
 
+def _tool_records(output: str) -> list[dict[str, object]]:
+    """Our tool log records only. Other loggers (asyncio, LiveKit) may write lines at any
+    time, e.g. during garbage collection, so lines are filtered, not assumed."""
+    records = []
+    for line in output.splitlines():
+        try:
+            inner = json.loads(json.loads(line)["message"])
+        except (ValueError, KeyError, TypeError):
+            continue
+        if isinstance(inner, dict) and inner.get("event") == "tool":
+            records.append(inner)
+    return records
+
+
 def test_tool_logs_contain_no_arguments(service: ToolService, captured_logs: io.StringIO) -> None:
     booking_id = _book(service)
     service.find_booking(PII_NAME, PII_DOB)
@@ -194,8 +208,7 @@ def test_tool_logs_contain_no_arguments(service: ToolService, captured_logs: io.
 
     output = captured_logs.getvalue()
     _assert_no_pii(output)
-    events = [json.loads(line)["message"] for line in output.splitlines() if '"event' in line]
-    tools = [json.loads(e)["tool"] for e in events]
+    tools = [record["tool"] for record in _tool_records(output)]
     assert tools.count("take_message") == 3 and "book" in tools
 
 

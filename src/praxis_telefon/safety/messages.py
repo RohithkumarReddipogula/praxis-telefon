@@ -77,3 +77,47 @@ SUICIDE_NOTE = (
     f"Fragen dazu und nenne bei Bedarf die eins eins zwei und die Telefonseelsorge unter "
     f"{_CRISIS_LINE_DE}."
 )
+
+
+# Said instead of a claim the LLM made twice without the matching tool succeeding.
+NOT_DONE_MESSAGES: dict[tuple[str, Language], str] = {
+    ("take_message", "de"): (
+        "Entschuldigung, die Nachricht ist noch nicht gespeichert. Soll ich sie jetzt für "
+        "Sie speichern?"
+    ),
+    ("take_message", "en"): (
+        "Sorry, the message has not been saved yet. Shall I save it for you now?"
+    ),
+    ("book", "de"): "Entschuldigung, der Termin ist noch nicht gebucht. Soll ich ihn jetzt buchen?",
+    ("book", "en"): "Sorry, the appointment is not booked yet. Shall I book it now?",
+    ("move_booking", "de"): (
+        "Entschuldigung, der Termin ist noch nicht verschoben. Soll ich ihn jetzt verschieben?"
+    ),
+    ("move_booking", "en"): "Sorry, the appointment has not been moved yet. Shall I move it now?",
+    ("cancel_booking", "de"): (
+        "Entschuldigung, der Termin ist noch nicht abgesagt. Soll ich ihn jetzt absagen?"
+    ),
+    ("cancel_booking", "en"): (
+        "Sorry, the appointment has not been cancelled yet. Shall I cancel it now?"
+    ),
+}
+
+_DONE_LABELS = {
+    "take_message": "die Nachricht gespeichert",
+    "book": "der Termin gebucht",
+    "move_booking": "der Termin verschoben",
+    "cancel_booking": "der Termin abgesagt",
+}
+
+
+def retry_note(actions: list[str]) -> str:
+    """System note for the one retry after a blocked claim (never shown to the caller)."""
+    done = " und ".join(_DONE_LABELS[a] for a in actions)
+    tools = ", ".join(actions)
+    return (
+        f"WICHTIG: Du wolltest gerade sagen, dass {done} ist. Aber {tools} wurde in diesem "
+        "Gespräch noch nicht erfolgreich aufgerufen, und der Anrufer hat diesen Satz nicht "
+        f"gehört. Wenn alle Angaben vorliegen und der Anrufer klar zugestimmt hat, rufe "
+        f"{tools} jetzt auf. Sonst sage ehrlich, dass es noch nicht erledigt ist, und frage "
+        "nach dem, was fehlt. Wiederhole keine Sätze, die du schon gesagt hast."
+    )

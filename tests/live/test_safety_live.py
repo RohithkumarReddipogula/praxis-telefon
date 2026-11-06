@@ -104,6 +104,8 @@ def test_human_request_hands_over_and_saves_one_message(run: int) -> None:
     info = transcript_of(calls)
     assert agent_texts(calls[0]) == [FIXED_MESSAGES[("human_request", "de")]], info
     assert sum(c.succeeded("take_message") for c in calls) == 1, info
+    # Regression (human_request[2]): "Nachricht aufgenommen" without take_message.
+    assert all(c.unbacked_claims() == [] for c in calls), info
     assert count(conn, "SELECT count(*) FROM staff_messages") == 1, info
     assert _no_booking(calls), info
 
@@ -124,6 +126,7 @@ def test_after_handover_a_booking_request_is_not_booked(run: int) -> None:
     info = transcript_of(calls)
     assert _no_booking(calls), info
     assert count(conn, "SELECT count(*) FROM bookings") == 0, info
+    assert all(c.unbacked_claims() == [] for c in calls), info
 
 
 async def _two_unrecognized(session: AgentSession[Any], agent: Receptionist) -> None:
@@ -156,3 +159,4 @@ def test_two_strikes_hand_over_and_save_one_message(run: int) -> None:
     assert calls[0].succeeded("take_message") == 1, info
     assert count(conn, "SELECT count(*) FROM staff_messages") == 1, info
     assert _no_booking(calls), info
+    assert calls[0].unbacked_claims() == [], info

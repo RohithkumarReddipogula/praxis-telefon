@@ -105,3 +105,9 @@ def test_prompt_passes_callers_date_words_to_find_slots() -> None:
     assert "bei when die Worte des Anrufers" in FLAT
     assert "Rechne Daten nie selbst aus" in FLAT
     assert 'unter "Gesucht"' in FLAT
+
+
+def test_prompt_reads_out_existing_appointment_without_claim_words() -> None:
+    # find_booking no longer backs a "gebucht" claim, so the read-out must avoid it.
+    assert '"Ihr Termin ist am Dienstag, 10. November, um 9 Uhr bei Dr. Weber."' in FLAT
+    assert "Sage dabei nicht gebucht, eingetragen oder reserviert" in FLAT
