@@ -5,15 +5,17 @@ Run with ``uv run python -m praxis_telefon.agent.main console`` (see README).
 
 from __future__ import annotations
 
+import json
 import logging
+from datetime import datetime
 from typing import Any
 
 from dotenv import load_dotenv
 from livekit.agents import (
-    Agent,
     AgentServer,
     AgentSession,
     ConversationItemAddedEvent,
+    FunctionToolsExecutedEvent,
     JobContext,
     TurnHandlingOptions,
     cli,
@@ -24,9 +26,13 @@ from livekit.agents.voice.turn import EndpointingOptions, InterruptionOptions
 from livekit.plugins import deepgram, elevenlabs, openai, silero
 from livekit.plugins.openai.models import OpenRouterProviderPreferences
 
-from praxis_telefon.agent.prompts import GREETING_DE, SYSTEM_PROMPT
+from praxis_telefon.agent.claim_check import ClaimTracker
+from praxis_telefon.agent.prompts import GREETING_DE
+from praxis_telefon.agent.receptionist import Receptionist
+from praxis_telefon.agent.tool_service import ToolService
 from praxis_telefon.agent.turn_log import build_turn_record, format_turn_record
 from praxis_telefon.config import Settings
+from praxis_telefon.db.schema import PRACTICE_TZ, connect
 from praxis_telefon.logging_privacy import install_pii_filter
 
 logger = logging.getLogger("praxis_telefon.turns")
@@ -45,9 +51,21 @@ INTERRUPTION: InterruptionOptions = {"mode": "vad"}
 server = AgentServer()
 
 
-class Receptionist(Agent):
-    def __init__(self) -> None:
-        super().__init__(instructions=SYSTEM_PROMPT)
+def practice_now() -> datetime:
+    return datetime.now(PRACTICE_TZ)
+
+
+class DatabaseMissing(RuntimeError):
+    pass
+
+
+def open_database(settings: Settings) -> ToolService:
+    path = settings.database_path
+    if not path.exists():
+        raise DatabaseMissing(
+            f"Database {path} not found. Create it with: uv run python -m praxis_telefon.db.seed"
+        )
+    return ToolService(connect(path), practice_now)
 
 
 def stt_options(settings: Settings) -> dict[str, Any]:
@@ -114,6 +132,26 @@ def attach_turn_logger(session: AgentSession[Any]) -> None:
             logger.info(format_turn_record(record))
 
 
+def attach_claim_check(session: AgentSession[Any]) -> None:
+    """Log when the agent says a booking changed before the matching tool succeeded."""
+    tracker = ClaimTracker()
+
+    @session.on("function_tools_executed")
+    def _on_tools(ev: FunctionToolsExecutedEvent) -> None:
+        for output in ev.function_call_outputs:
+            tracker.tool_result(output.name, ok=not output.is_error)
+
+    @session.on("conversation_item_added")
+    def _on_item(ev: ConversationItemAddedEvent) -> None:
+        item = ev.item
+        if not isinstance(item, ChatMessage) or item.role != "assistant":
+            return
+        for action in tracker.unbacked(item.text_content or ""):
+            # Action name only, never the spoken text.
+            record = {"event": "unbacked_claim", "action": action}
+            logger.warning(json.dumps(record, separators=(",", ":")))
+
+
 @server.rtc_session(agent_name="praxis-telefon")
 async def entrypoint(ctx: JobContext) -> None:
     # Runs in the job process after LiveKit configured logging there.
@@ -121,11 +159,14 @@ async def entrypoint(ctx: JobContext) -> None:
     settings = Settings.from_env()
     logger.setLevel(settings.log_level)
 
+    service = open_database(settings)
     session = build_session(settings)
     attach_turn_logger(session)
+    attach_claim_check(session)
+    ctx.add_shutdown_callback(service.close)
 
     # record=False: do not upload call audio/transcripts to LiveKit Cloud observability.
-    await session.start(agent=Receptionist(), room=ctx.room, record=False)
+    await session.start(agent=Receptionist(service), room=ctx.room, record=False)
     session.say(GREETING_DE, allow_interruptions=False)
 
 

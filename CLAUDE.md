@@ -24,6 +24,7 @@ Run the agent (the user runs this; it needs real keys and a mic):
 
 ```
 uv run -m livekit.agents download-files                     # once: VAD + turn-detector weights
+uv run python -m praxis_telefon.db.seed                     # once: synthetic data (--reset to recreate)
 uv run python -m praxis_telefon.agent.main console          # talk via mic in the terminal
 uv run python -m praxis_telefon.agent.main dev              # LiveKit Cloud (needs LIVEKIT_*)
 ```
