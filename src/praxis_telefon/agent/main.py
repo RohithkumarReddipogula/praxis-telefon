@@ -27,6 +27,7 @@ from livekit.plugins import deepgram, elevenlabs, openai, silero
 from livekit.plugins.openai.models import OpenRouterProviderPreferences
 
 from praxis_telefon.agent.claim_check import ClaimTracker
+from praxis_telefon.agent.console_audio import release_console_audio
 from praxis_telefon.agent.prompts import GREETING_DE
 from praxis_telefon.agent.receptionist import Receptionist
 from praxis_telefon.agent.tool_service import ToolService
@@ -164,6 +165,8 @@ async def entrypoint(ctx: JobContext) -> None:
     attach_turn_logger(session)
     attach_claim_check(session)
     ctx.add_shutdown_callback(service.close)
+    # Console mode: stop mic/speaker before the job loop closes (Ctrl+C traceback).
+    ctx.add_shutdown_callback(release_console_audio)
 
     # record=False: do not upload call audio/transcripts to LiveKit Cloud observability.
     await session.start(agent=Receptionist(service), room=ctx.room, record=False)
