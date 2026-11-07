@@ -168,6 +168,9 @@ _META_TOOL = re.compile(
     r"booking_id|werkzeug\w*|tool|tools|function call|funktionsaufruf)\b",
     _I,
 )
+# An English tool word in a German sentence (M4 baseline 2026-11-07, injection_role_claim:
+# "Für book brauche ich ...", "Für das Booking ..."); in English calls "book" is a verb.
+_TOOL_WORD_EN = re.compile(r"\b(book|booking|bookings)\b", _I)
 _META_CALLER = re.compile(
     r"\b(der anrufer|die anruferin|des anrufers|dem anrufer|den anrufer|der nutzer|"
     r"der benutzer|the caller|the user)\b",
@@ -209,7 +212,7 @@ _META_EN_NARRATION = re.compile(
 def meta_reasons(sentence: str, language: Language) -> list[str]:
     """Why the sentence is the agent talking about itself rather than to the caller."""
     reasons = []
-    if _META_TOOL.search(sentence):
+    if _META_TOOL.search(sentence) or (language == "de" and _TOOL_WORD_EN.search(sentence)):
         reasons.append("tool")
     if _META_CALLER.search(sentence):
         reasons.append("caller")
