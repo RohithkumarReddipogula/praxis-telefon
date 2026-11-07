@@ -9,7 +9,10 @@ interrupted playback when there was no pause). Outcomes, one record per episode:
 - ``false_interruption``: paused, then resumed (``paused_s``: how long it was quiet);
 - ``not_stopped``: the agent talked through (a backchannel LiveKit did not count);
 - ``uninterruptible``: the caller spoke during speech that cannot be interrupted
-  (greeting, crisis messages); not a miss.
+  (greeting, crisis messages); not a miss;
+- ``resumed_then_stopped``: the agent resumed after a false interruption and was cut
+  within RESUME_WINDOW_S without new caller speech (a late transcript committed the
+  turn): the risk of a short ``false_interruption_timeout``.
 Times only, never words. The console's speaker buffer (a few tens of ms) is not included.
 
 Bugs (voice test 2026-11-07): the start of a false interruption ("mhm") was kept after
@@ -33,6 +36,7 @@ from livekit.agents import (
 )
 
 logger = logging.getLogger("praxis_telefon.turns")
+RESUME_WINDOW_S = 3.0
 
 
 class BargeInDetector:
@@ -43,6 +47,7 @@ class BargeInDetector:
         self._started_at: float | None = None
         self._quiet_at: float | None = None
         self._interruptible = True
+        self._resumed_at: float | None = None  # last false interruption
 
     def _reset(self) -> None:
         self._started_at = self._quiet_at = None
@@ -55,6 +60,7 @@ class BargeInDetector:
         if self._agent_speaking and self._started_at is None:
             self._started_at = now
             self._interruptible = interruptible
+            self._resumed_at = None  # new caller speech: a new episode
 
     def agent_quiet(self, now: float) -> None:
         """The agent's audio paused (state speaking -> listening) during the episode."""
@@ -68,6 +74,14 @@ class BargeInDetector:
 
     def playback_finished(self, now: float, *, interrupted: bool) -> dict[str, Any] | None:
         if self._started_at is None:
+            resumed, self._resumed_at = self._resumed_at, None
+            if interrupted and resumed is not None and now - resumed <= RESUME_WINDOW_S:
+                return {
+                    "event": "barge_in",
+                    "outcome": "resumed_then_stopped",
+                    "time_to_quiet_s": None,
+                    "after_resume_s": round(now - resumed, 3),
+                }
             return None
         if interrupted:
             record = {"event": "barge_in", "outcome": "stopped",
@@ -87,6 +101,7 @@ class BargeInDetector:
             "resumed": resumed,
         }
         self._reset()
+        self._resumed_at = now if resumed else None
         return record
 
 

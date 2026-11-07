@@ -178,6 +178,13 @@ def test_interruption_detection_stays_local() -> None:
     assert main.INTERRUPTION["mode"] == "vad"
 
 
+def test_false_interruption_resumes_after_one_second() -> None:
+    # Voice test 2026-11-07: "mhm" and a cough paused the agent for about 2 s (the 2.0 s
+    # default) before it resumed. 1.0 s; min_duration stays at LiveKit's 0.5 s.
+    assert main.INTERRUPTION["false_interruption_timeout"] == 1.0
+    assert "min_duration" not in main.INTERRUPTION
+
+
 def test_missing_database_gives_clear_error(tmp_path: Path) -> None:
     import pytest
 

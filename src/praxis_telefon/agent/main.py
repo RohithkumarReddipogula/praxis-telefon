@@ -57,7 +57,11 @@ ENDPOINTING: EndpointingOptions = {"min_delay": 0.4, "max_delay": 1.5}
 
 # "vad": barge-in is decided locally by Silero. The default "adaptive" detector in
 # console/dev mode streams caller audio to agent-gateway.livekit.cloud.
-INTERRUPTION: InterruptionOptions = {"mode": "vad"}
+# false_interruption_timeout 1.0 (default 2.0): "mhm" or a cough paused the agent for
+# about 2 s before it resumed (voice test 2026-11-07). Risk: a late transcript after the
+# resume cuts the agent again (barge_in outcome resumed_then_stopped). min_duration stays
+# at LiveKit's 0.5 s.
+INTERRUPTION: InterruptionOptions = {"mode": "vad", "false_interruption_timeout": 1.0}
 
 server = AgentServer()
 

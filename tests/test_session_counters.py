@@ -256,3 +256,44 @@ def test_livekit_warning_is_counted(caplog: pytest.LogCaptureFixture) -> None:
 def test_entrypoint_attaches_both_counters() -> None:
     names = entrypoint.__code__.co_names
     assert "attach_barge_in" in names and "attach_late_transcript" in names
+
+
+def test_interrupted_playback_soon_after_a_resume_is_resumed_then_stopped() -> None:
+    # The risk of false_interruption_timeout 1.0 (user, 2026-11-07): LiveKit resumes, then
+    # a late transcript commits the turn and cuts the agent again. Before, an interrupted
+    # playback without an open episode was dropped.
+    d = BargeInDetector()
+    d.agent_speaking(True)
+    d.caller_started(10.0)
+    d.agent_quiet(10.5)
+    d.false_interruption(12.0, resumed=True)
+    d.agent_speaking(True)
+    record = d.playback_finished(12.8, interrupted=True)
+    assert record == {
+        "event": "barge_in",
+        "outcome": "resumed_then_stopped",
+        "time_to_quiet_s": None,
+        "after_resume_s": 0.8,
+    }
+
+
+def test_late_interrupted_playback_is_not_resumed_then_stopped() -> None:
+    d = BargeInDetector()
+    d.agent_speaking(True)
+    d.caller_started(10.0)
+    d.agent_quiet(10.5)
+    d.false_interruption(12.0, resumed=True)
+    assert d.playback_finished(16.0, interrupted=True) is None  # more than 3 s later
+
+
+def test_new_caller_speech_after_a_resume_is_a_new_episode() -> None:
+    d = BargeInDetector()
+    d.agent_speaking(True)
+    d.caller_started(10.0)
+    d.agent_quiet(10.5)
+    d.false_interruption(12.0, resumed=True)
+    d.agent_speaking(True)
+    d.caller_started(12.5)
+    d.agent_quiet(12.9)
+    record = d.playback_finished(13.5, interrupted=True)
+    assert record == {"event": "barge_in", "outcome": "stopped", "time_to_quiet_s": 0.4}
