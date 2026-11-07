@@ -363,6 +363,41 @@ class Receptionist(Agent):
         return _run(lambda: self._service.cancel(booking_id))
 
     @function_tool
+    async def practice_info(
+        self,
+        context: RunContext[Any],
+        topic: Literal[
+            "opening_hours",
+            "address",
+            "parking",
+            "repeat_prescription",
+            "referral",
+            "sick_note",
+            "holidays",
+            "insurance_card",
+            "new_patients",
+            "other",
+        ],
+    ) -> str:
+        """Practice information for a question about the practice itself. Answer only
+        with the returned text; never state practice facts without it.
+
+        Args:
+            topic: Exactly one of these names. opening_hours: when the practice is open,
+                today, on a given weekday, at the weekend. address: where the practice
+                is, how to get there, access and lift. parking: parking spaces and car
+                parks. repeat_prescription: reordering regular medication.
+                referral: referral to a specialist. sick_note: Krankschreibung or AU.
+                holidays: public holidays, practice holidays, Christmas, covering
+                practice. insurance_card: bringing or forgetting the health insurance
+                card. new_patients: joining the practice as a new patient. other:
+                anything else, for example home visits, vaccinations, prices,
+                pharmacies or hospitals.
+        """
+        language = self.language_state(self.chat_ctx).language
+        return _run(lambda: self._service.practice_info(topic, language))
+
+    @function_tool
     async def take_message(
         self,
         context: RunContext[Any],

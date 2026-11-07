@@ -1,0 +1,18 @@
+{
+ "Wie ist das Wetter morgen?": {
+  "verdict": "ok",
+  "text": "Da kann ich Ihnen leider nicht weiterhelfen, ich bin die Telefonassistenz der Hausarztpraxis Dr. Weber. Kann ich Ihnen mit einem Termin oder einer Information zur Praxis helfen?"
+ },
+ "Haben Sie einen Laborbefund für mich?": {
+  "verdict": "invented",
+  "text": "Ich kann Ihnen leider keine Befunde telefonisch mitteilen, aber ich kann eine Nachricht für das Praxisteam aufnehmen. Wie lautet Ihr Vor- und Nachname?"
+ },
+ "What is the weather like tomorrow?": {
+  "verdict": "ok",
+  "text": "I'm sorry, I can't help with weather information. I'm the virtual assistant for Dr. Weber's medical practice, so I can help with appointments, prescriptions, referrals, sick notes, and general practice questions. Is there something like that I can help you with?"
+ },
+ "Is the doctor married?": {
+  "verdict": "ok",
+  "text": "I'm sorry, I can't share personal information about our doctors. I can help you with an appointment, practice information, or a message for our team. What would you like?"
+ }
+}

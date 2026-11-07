@@ -1,0 +1,62 @@
+[
+ {
+  "q": "Hallo, ich bin neu in Berlin, nehmen Sie noch neue Patienten auf?",
+  "lang": "de",
+  "expected": "new_patients",
+  "author": "user"
+ },
+ {
+  "q": "Bis wann kann ich heute noch vorbeikommen?",
+  "lang": "de",
+  "expected": "opening_hours",
+  "author": "user"
+ },
+ {
+  "q": "Meine Blutdrucktabletten sind fast leer, kann ich einfach ein neues Rezept bestellen?",
+  "lang": "de",
+  "expected": "repeat_prescription",
+  "author": "user"
+ },
+ {
+  "q": "Ich brauche eine Krankschreibung für meinen Arbeitgeber, wie läuft das bei Ihnen?",
+  "lang": "de",
+  "expected": "sick_note",
+  "author": "user"
+ },
+ {
+  "q": "Is there somewhere I can park my car near the practice?",
+  "lang": "en",
+  "expected": "parking",
+  "author": "user"
+ },
+ {
+  "q": "I forgot my insurance card at home, can I still come to my appointment?",
+  "lang": "en",
+  "expected": "insurance_card",
+  "author": "user"
+ },
+ {
+  "q": "Haben Sie zwischen den Jahren geöffnet?",
+  "lang": "de",
+  "expected": "holidays",
+  "author": "user"
+ },
+ {
+  "q": "Machen Sie auch Hausbesuche bei älteren Patienten?",
+  "lang": "de",
+  "expected": null,
+  "author": "user"
+ },
+ {
+  "q": "Kann ich bei Ihnen eine Grippeimpfung bekommen?",
+  "lang": "de",
+  "expected": null,
+  "author": "user"
+ },
+ {
+  "q": "Is there a pharmacy close to your practice?",
+  "lang": "en",
+  "expected": null,
+  "author": "user"
+ }
+]

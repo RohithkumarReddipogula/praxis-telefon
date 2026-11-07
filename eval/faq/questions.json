@@ -1,0 +1,612 @@
+[
+ {
+  "q": "Wann haben Sie geöffnet?",
+  "lang": "de",
+  "expected": "opening_hours"
+ },
+ {
+  "q": "Wo ist die Praxis?",
+  "lang": "de",
+  "expected": "address"
+ },
+ {
+  "q": "Wann hat die Apotheke auf?",
+  "lang": "de",
+  "expected": null
+ },
+ {
+  "q": "Kann ich bei Ihnen parken?",
+  "lang": "de",
+  "expected": "parking"
+ },
+ {
+  "q": "Ich brauche ein Folgerezept.",
+  "lang": "de",
+  "expected": "repeat_prescription"
+ },
+ {
+  "q": "Machen Sie Hausbesuche?",
+  "lang": "de",
+  "expected": null
+ },
+ {
+  "q": "Ich brauche eine Überweisung zum Orthopäden.",
+  "lang": "de",
+  "expected": "referral"
+ },
+ {
+  "q": "Ich brauche eine Krankschreibung.",
+  "lang": "de",
+  "expected": "sick_note"
+ },
+ {
+  "q": "Was kostet eine Reiseimpfung?",
+  "lang": "de",
+  "expected": null
+ },
+ {
+  "q": "Haben Sie über Weihnachten geöffnet?",
+  "lang": "de",
+  "expected": "holidays"
+ },
+ {
+  "q": "Muss ich meine Versichertenkarte mitbringen?",
+  "lang": "de",
+  "expected": "insurance_card"
+ },
+ {
+  "q": "Bieten Sie Akupunktur an?",
+  "lang": "de",
+  "expected": null
+ },
+ {
+  "q": "Nehmen Sie neue Patienten auf?",
+  "lang": "de",
+  "expected": "new_patients"
+ },
+ {
+  "q": "Haben Sie heute Nachmittag offen?",
+  "lang": "de",
+  "expected": "opening_hours"
+ },
+ {
+  "q": "Kann ich mich für meinen Mann krankschreiben lassen?",
+  "lang": "de",
+  "expected": "sick_note"
+ },
+ {
+  "q": "Wie ist Ihre Adresse?",
+  "lang": "de",
+  "expected": "address"
+ },
+ {
+  "q": "Gibt es Parkplätze an der Praxis?",
+  "lang": "de",
+  "expected": "parking"
+ },
+ {
+  "q": "Haben Sie WLAN im Wartezimmer?",
+  "lang": "de",
+  "expected": null
+ },
+ {
+  "q": "Kann ich mein Rezept telefonisch bestellen?",
+  "lang": "de",
+  "expected": "repeat_prescription"
+ },
+ {
+  "q": "Bekomme ich bei Ihnen eine Überweisung?",
+  "lang": "de",
+  "expected": "referral"
+ },
+ {
+  "q": "Wie heißt die Ärztin mit Vornamen?",
+  "lang": "de",
+  "expected": null
+ },
+ {
+  "q": "Kann ich mich telefonisch krankschreiben lassen?",
+  "lang": "de",
+  "expected": "sick_note"
+ },
+ {
+  "q": "Machen Sie Betriebsferien?",
+  "lang": "de",
+  "expected": "holidays"
+ },
+ {
+  "q": "Gibt es eine Kinderbetreuung?",
+  "lang": "de",
+  "expected": null
+ },
+ {
+  "q": "Brauche ich die Gesundheitskarte?",
+  "lang": "de",
+  "expected": "insurance_card"
+ },
+ {
+  "q": "Kann ich bei Ihnen Patient werden?",
+  "lang": "de",
+  "expected": "new_patients"
+ },
+ {
+  "q": "Kann ich mit Karte bezahlen?",
+  "lang": "de",
+  "expected": null
+ },
+ {
+  "q": "bis wann ist die praxis heute auf",
+  "lang": "de",
+  "expected": "opening_hours"
+ },
+ {
+  "q": "wie komme ich zu ihnen mit dem bus",
+  "lang": "de",
+  "expected": "address"
+ },
+ {
+  "q": "Machen Sie Führerscheinuntersuchungen?",
+  "lang": "de",
+  "expected": null
+ },
+ {
+  "q": "wo kann ich mein auto abstellen",
+  "lang": "de",
+  "expected": "parking"
+ },
+ {
+  "q": "meine tabletten sind bald alle wie bekomme ich neue",
+  "lang": "de",
+  "expected": "repeat_prescription"
+ },
+ {
+  "q": "Wie ist das Wetter morgen?",
+  "lang": "de",
+  "expected": null
+ },
+ {
+  "q": "kann ich eine überweisung zum hautarzt bekommen",
+  "lang": "de",
+  "expected": "referral"
+ },
+ {
+  "q": "ich brauch eine a u für die arbeit",
+  "lang": "de",
+  "expected": "sick_note"
+ },
+ {
+  "q": "Wo ist das nächste Krankenhaus?",
+  "lang": "de",
+  "expected": null
+ },
+ {
+  "q": "wer vertritt sie wenn sie im urlaub sind",
+  "lang": "de",
+  "expected": "holidays"
+ },
+ {
+  "q": "ich habe meine krankenkassenkarte vergessen",
+  "lang": "de",
+  "expected": "insurance_card"
+ },
+ {
+  "q": "Haben Sie eine Toilette für Patienten?",
+  "lang": "de",
+  "expected": null
+ },
+ {
+  "q": "ich bin neu hergezogen und suche einen hausarzt",
+  "lang": "de",
+  "expected": "new_patients"
+ },
+ {
+  "q": "Haben Sie am Samstag Sprechstunde?",
+  "lang": "de",
+  "expected": "opening_hours"
+ },
+ {
+  "q": "Macht die Ärztin auch Videosprechstunde?",
+  "lang": "de",
+  "expected": null
+ },
+ {
+  "q": "In welcher Straße sind Sie?",
+  "lang": "de",
+  "expected": "address"
+ },
+ {
+  "q": "Haben Sie einen Behindertenparkplatz?",
+  "lang": "de",
+  "expected": "parking"
+ },
+ {
+  "q": "Wie lange muss ich im Wartezimmer warten?",
+  "lang": "de",
+  "expected": null
+ },
+ {
+  "q": "Wann kann ich das Rezept abholen?",
+  "lang": "de",
+  "expected": "repeat_prescription"
+ },
+ {
+  "q": "Stellen Sie Überweisungen telefonisch aus?",
+  "lang": "de",
+  "expected": "referral"
+ },
+ {
+  "q": "Bieten Sie Ernährungsberatung an?",
+  "lang": "de",
+  "expected": null
+ },
+ {
+  "q": "Bekomme ich eine Krankmeldung ohne Termin?",
+  "lang": "de",
+  "expected": "sick_note"
+ },
+ {
+  "q": "Ist die Praxis an Feiertagen geschlossen?",
+  "lang": "de",
+  "expected": "holidays"
+ },
+ {
+  "q": "Kann ich meinen Hund mitbringen?",
+  "lang": "de",
+  "expected": null
+ },
+ {
+  "q": "Wie oft muss ich die Karte zeigen?",
+  "lang": "de",
+  "expected": "insurance_card"
+ },
+ {
+  "q": "Ich möchte meinen Hausarzt wechseln.",
+  "lang": "de",
+  "expected": "new_patients"
+ },
+ {
+  "q": "Wo ist der nächste Geldautomat?",
+  "lang": "de",
+  "expected": null
+ },
+ {
+  "q": "Ist mittwochs nachmittags geöffnet?",
+  "lang": "de",
+  "expected": "opening_hours"
+ },
+ {
+  "q": "Gibt es einen Aufzug zur Praxis?",
+  "lang": "de",
+  "expected": "address"
+ },
+ {
+  "q": "Behandeln Sie auch Privatpatienten zum gleichen Preis?",
+  "lang": "de",
+  "expected": null
+ },
+ {
+  "q": "Gibt es ein Parkhaus in der Nähe?",
+  "lang": "de",
+  "expected": "parking"
+ },
+ {
+  "q": "Ich möchte meine Medikamente nachbestellen.",
+  "lang": "de",
+  "expected": "repeat_prescription"
+ },
+ {
+  "q": "Haben Sie einen Laborbefund für mich?",
+  "lang": "de",
+  "expected": null
+ },
+ {
+  "q": "Ich brauche einen Überweisungsschein für die Radiologie.",
+  "lang": "de",
+  "expected": "referral"
+ },
+ {
+  "q": "Wie bekomme ich eine Arbeitsunfähigkeitsbescheinigung?",
+  "lang": "de",
+  "expected": "sick_note"
+ },
+ {
+  "q": "Do you do home visits?",
+  "lang": "en",
+  "expected": null
+ },
+ {
+  "q": "Haben Sie an Ostern offen?",
+  "lang": "de",
+  "expected": "holidays"
+ },
+ {
+  "q": "Was ist, wenn ich meine Chipkarte nicht dabei habe?",
+  "lang": "de",
+  "expected": "insurance_card"
+ },
+ {
+  "q": "How much does a travel vaccination cost?",
+  "lang": "en",
+  "expected": null
+ },
+ {
+  "q": "Was muss ich als neue Patientin mitbringen?",
+  "lang": "de",
+  "expected": "new_patients"
+ },
+ {
+  "q": "Was sind Ihre Öffnungszeiten?",
+  "lang": "de",
+  "expected": "opening_hours"
+ },
+ {
+  "q": "Is there wifi in the waiting room?",
+  "lang": "en",
+  "expected": null
+ },
+ {
+  "q": "Wo finde ich Sie genau?",
+  "lang": "de",
+  "expected": "address"
+ },
+ {
+  "q": "Ist das Parken für Patienten kostenlos?",
+  "lang": "de",
+  "expected": "parking"
+ },
+ {
+  "q": "Where is the nearest pharmacy?",
+  "lang": "en",
+  "expected": null
+ },
+ {
+  "q": "Wie lange dauert ein Wiederholungsrezept?",
+  "lang": "de",
+  "expected": "repeat_prescription"
+ },
+ {
+  "q": "Muss ich für eine Überweisung vorbeikommen?",
+  "lang": "de",
+  "expected": "referral"
+ },
+ {
+  "q": "Do you offer acupuncture?",
+  "lang": "en",
+  "expected": null
+ },
+ {
+  "q": "Mein Chef will einen gelben Schein.",
+  "lang": "de",
+  "expected": "sick_note"
+ },
+ {
+  "q": "Wann ist die Praxis im Urlaub?",
+  "lang": "de",
+  "expected": "holidays"
+ },
+ {
+  "q": "Can I pay by card?",
+  "lang": "en",
+  "expected": null
+ },
+ {
+  "q": "Muss ich jedes Quartal die Karte vorlegen?",
+  "lang": "de",
+  "expected": "insurance_card"
+ },
+ {
+  "q": "Wie melde ich mich als neuer Patient an?",
+  "lang": "de",
+  "expected": "new_patients"
+ },
+ {
+  "q": "What is the weather like tomorrow?",
+  "lang": "en",
+  "expected": null
+ },
+ {
+  "q": "What are your opening hours?",
+  "lang": "en",
+  "expected": "opening_hours"
+ },
+ {
+  "q": "What is your address?",
+  "lang": "en",
+  "expected": "address"
+ },
+ {
+  "q": "Can I bring my dog?",
+  "lang": "en",
+  "expected": null
+ },
+ {
+  "q": "Is there parking at the practice?",
+  "lang": "en",
+  "expected": "parking"
+ },
+ {
+  "q": "I need a repeat prescription.",
+  "lang": "en",
+  "expected": "repeat_prescription"
+ },
+ {
+  "q": "Do you do video consultations?",
+  "lang": "en",
+  "expected": null
+ },
+ {
+  "q": "I need a referral to a specialist.",
+  "lang": "en",
+  "expected": "referral"
+ },
+ {
+  "q": "I need a sick note for work.",
+  "lang": "en",
+  "expected": "sick_note"
+ },
+ {
+  "q": "Where is the nearest hospital?",
+  "lang": "en",
+  "expected": null
+ },
+ {
+  "q": "Are you open over Christmas?",
+  "lang": "en",
+  "expected": "holidays"
+ },
+ {
+  "q": "Do I need to bring my insurance card?",
+  "lang": "en",
+  "expected": "insurance_card"
+ },
+ {
+  "q": "When does the pharmacy open?",
+  "lang": "en",
+  "expected": null
+ },
+ {
+  "q": "Are you accepting new patients?",
+  "lang": "en",
+  "expected": "new_patients"
+ },
+ {
+  "q": "are you open on friday afternoon",
+  "lang": "en",
+  "expected": "opening_hours"
+ },
+ {
+  "q": "Is the doctor married?",
+  "lang": "en",
+  "expected": null
+ },
+ {
+  "q": "where are you located",
+  "lang": "en",
+  "expected": "address"
+ },
+ {
+  "q": "where can i leave my car",
+  "lang": "en",
+  "expected": "parking"
+ },
+ {
+  "q": "can i order my medication by phone",
+  "lang": "en",
+  "expected": "repeat_prescription"
+ },
+ {
+  "q": "can you refer me to a dermatologist",
+  "lang": "en",
+  "expected": "referral"
+ },
+ {
+  "q": "can i get a sick note by phone",
+  "lang": "en",
+  "expected": "sick_note"
+ },
+ {
+  "q": "what happens when the doctor is on holiday",
+  "lang": "en",
+  "expected": "holidays"
+ },
+ {
+  "q": "i forgot my health card",
+  "lang": "en",
+  "expected": "insurance_card"
+ },
+ {
+  "q": "can i register as a new patient",
+  "lang": "en",
+  "expected": "new_patients"
+ },
+ {
+  "q": "When do you close today?",
+  "lang": "en",
+  "expected": "opening_hours"
+ },
+ {
+  "q": "How do I get to the practice by bus?",
+  "lang": "en",
+  "expected": "address"
+ },
+ {
+  "q": "Do you have disabled parking?",
+  "lang": "en",
+  "expected": "parking"
+ },
+ {
+  "q": "When can I pick up my prescription?",
+  "lang": "en",
+  "expected": "repeat_prescription"
+ },
+ {
+  "q": "Do I need an appointment for a referral?",
+  "lang": "en",
+  "expected": "referral"
+ },
+ {
+  "q": "Do I need to come in for a doctor's note?",
+  "lang": "en",
+  "expected": "sick_note"
+ },
+ {
+  "q": "Are you closed on public holidays?",
+  "lang": "en",
+  "expected": "holidays"
+ },
+ {
+  "q": "How often do I have to show my insurance card?",
+  "lang": "en",
+  "expected": "insurance_card"
+ },
+ {
+  "q": "I just moved here and need a family doctor.",
+  "lang": "en",
+  "expected": "new_patients"
+ },
+ {
+  "q": "Is the practice open at the weekend?",
+  "lang": "en",
+  "expected": "opening_hours"
+ },
+ {
+  "q": "Which street is the practice on?",
+  "lang": "en",
+  "expected": "address"
+ },
+ {
+  "q": "Is there a car park nearby?",
+  "lang": "en",
+  "expected": "parking"
+ },
+ {
+  "q": "I am running out of my pills, how do I get more?",
+  "lang": "en",
+  "expected": "repeat_prescription"
+ },
+ {
+  "q": "Can I get a referral over the phone?",
+  "lang": "en",
+  "expected": "referral"
+ },
+ {
+  "q": "How do I get signed off sick?",
+  "lang": "en",
+  "expected": "sick_note"
+ },
+ {
+  "q": "Who covers when the practice is on vacation?",
+  "lang": "en",
+  "expected": "holidays"
+ },
+ {
+  "q": "What if I don't have my card with me?",
+  "lang": "en",
+  "expected": "insurance_card"
+ },
+ {
+  "q": "What should I bring as a new patient?",
+  "lang": "en",
+  "expected": "new_patients"
+ }
+]

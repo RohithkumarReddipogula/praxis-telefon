@@ -144,6 +144,11 @@ _LANGUAGE_NOTE: dict[Language, str] = {
     "de": "Antworte auf Deutsch, der Anrufer spricht Deutsch.",
     "en": "Antworte auf Englisch, der Anrufer spricht Englisch.",
 }
+_FACT_NOTE = (
+    "WICHTIG: Angaben zur Praxis (Öffnungszeiten, Adresse, Parken, Rezepte, Überweisungen, "
+    "Krankschreibungen, Feiertage, Versichertenkarte, neue Patienten) nur mit practice_info "
+    "und nur mit dessen Text. Rufe practice_info auf oder sage, dass du es nicht weißt."
+)
 _INTENT_NOTE = (
     "WICHTIG: Frage nicht, ob es um einen neuen oder einen bestehenden Termin geht. "
     "Spricht der Anrufer nicht ausdrücklich von seinem eigenen, schon vereinbarten Termin, "
@@ -176,6 +181,8 @@ def retry_note_for(reasons: list[str], language: Language = "de") -> str:
         notes.append(_INTENT_NOTE)
     if "weekday" in reasons:
         notes.append(_WEEKDAY_NOTE)
+    if any(r.startswith("fact:") for r in reasons):
+        notes.append(_FACT_NOTE)
     return " ".join(notes)
 
 

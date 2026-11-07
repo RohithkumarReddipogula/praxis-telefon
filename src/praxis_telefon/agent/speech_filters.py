@@ -164,7 +164,7 @@ def detect_language(text: str) -> Language | None:
 # --- meta talk -----------------------------------------------------------------------------
 
 _META_TOOL = re.compile(
-    r"\b(find_slots|find_booking|move_booking|cancel_booking|take_message|slot_id|"
+    r"\b(find_slots|find_booking|move_booking|cancel_booking|take_message|practice_info|slot_id|"
     r"booking_id|werkzeug\w*|tool|tools|function call|funktionsaufruf)\b",
     _I,
 )
@@ -221,6 +221,62 @@ def meta_reasons(sentence: str, language: Language) -> list[str]:
     if spoken is not None and spoken != language:  # the call's language, decided by code
         reasons.append("language")
     return reasons
+
+
+# --- practice facts (FAQ, M3 Part C) ------------------------------------------------------
+
+# Statements of practice facts; the agent may only make them from practice_info's text
+# (claim_gate backs them; a closed day is also backed by find_slots). Questions and
+# conditionals ("Wenn die Praxis geschlossen ist, ...") are not statements.
+_PRACTICE_FACTS: dict[str, re.Pattern[str]] = {
+    "hours": re.compile(
+        r"\b(geöffnet|öffnungszeit\w*|sprechzeit\w*|sprechstunde\w*|"
+        # "offen" / "auf" only at the end of the clause: "Wir haben samstags nicht auf."
+        # Not "Bei Brustschmerzen ist es wichtig, dass Sie nicht auf einen Termin warten"
+        # (live suite 2026-11-07, emergency_de-1).
+        r"\b(wir haben|haben wir|die praxis (hat|ist)|(hat|ist) die praxis)\b.{0,40}"
+        r"\b(offen|auf)(?=\s*(?:[.,;:!]|$))|"
+        r"(are|is) open|open (from|until|on|at|today)|opening hours|office hours|"
+        r"clos(e|es) at)",
+        _I,
+    ),
+    "closed": re.compile(r"\b(geschlossen|closed)\b", _I),
+    "address": re.compile(
+        r"\b(musterstraße|musterstrasse|musterstadt|adresse|anschrift|bushaltestelle|"
+        r"aufzug|address|bus stop|lift)\b",
+        _I,
+    ),
+    "parking": re.compile(r"\b(parkpl\w*|parkhaus|parking|car park)\b", _I),
+    "holidays": re.compile(
+        r"\b(feiertag\w*|betriebsferien|urlaubszeit\w*|vertretungspraxis|public holidays?|"
+        r"covering practice)\b",
+        _I,
+    ),
+    "insurance_card": re.compile(
+        r"\b(gesundheitskarte|versichertenkarte|krankenkassenkarte|insurance card|"
+        r"health card)\b",
+        _I,
+    ),
+    "procedure": re.compile(
+        r"\b(folgerezept\w*|rezept)\b.{0,60}\b(bestell\w*|abhol\w*|bereit|werktag\w*)\b|"
+        r"\bzur abholung\b|\bready to collect\b|"
+        r"\b(krankschreibung|krankmeldung)\b.{0,60}\b(brauch\w*|benötig\w*|telefonisch|"
+        r"möglich)\b|\bsick note\b.{0,60}\b(needs?|possible|by phone)\b|"
+        r"\büberweisung\w*\b.{0,60}\b(stellt|ausstell\w*|nötig)\b|"
+        r"\breferrals?\b.{0,60}\b(issues?|necessary)\b|"
+        r"\b(nimmt|nehmen)\b.{0,30}\bneue patient\w*|\baccepting new patients\b",
+        _I,
+    ),
+}
+_FACT_EXEMPT = re.compile(r"\b(wenn|falls|sobald|if)\b", _I)
+
+
+def practice_facts(sentence: str) -> set[str]:
+    """Kinds of practice fact the sentence states (see claim_gate for what backs them)."""
+    s = sentence.strip()
+    if not s or s.endswith("?") or _FACT_EXEMPT.search(s):
+        return set()
+    return {family for family, pattern in _PRACTICE_FACTS.items() if pattern.search(s)}
 
 
 # --- new or existing appointment ---------------------------------------------------------

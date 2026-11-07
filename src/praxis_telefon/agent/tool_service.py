@@ -23,12 +23,14 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import date, datetime
 
+from praxis_telefon import faq
 from praxis_telefon.db.schema import name_key
 from praxis_telefon.tools import messages, relative_dates, scheduling
 from praxis_telefon.tools.errors import (
     BookingDisabled,
     BookingNotVerified,
     InvalidDateOfBirth,
+    InvalidTopic,
     SlotNotOffered,
     ToolFailure,
 )
@@ -179,6 +181,23 @@ class ToolService:
             if result.already_cancelled:
                 return f"Dieser Termin war bereits abgesagt ({result.slot.spoken})."
             return f"Abgesagt: {result.slot.spoken}."
+
+    def practice_info(self, topic: str, language: str) -> str:
+        """The FAQ entry for ``topic`` in the call's language; "other": no information."""
+        with self._logged("practice_info") as log:
+            if topic != "other" and topic not in faq.TOPICS:
+                raise InvalidTopic()
+            if topic == "other":
+                log["outcome"] = "no_entry"
+                return (
+                    "Dazu gibt es keine Auskunft der Praxis. Sag, dass du das nicht weißt, "
+                    "und biete an, eine Nachricht für das Praxisteam aufzunehmen. Erfinde "
+                    "nichts."
+                )
+            return (
+                "Auskunft der Praxis (nur diese Angaben verwenden, nichts ergänzen): "
+                + faq.answer_text(topic, language)
+            )
 
     def take_message(self, caller_name: str, callback_number: str, reason_category: str) -> str:
         with self._logged("take_message") as log:

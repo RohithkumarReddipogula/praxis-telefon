@@ -1,0 +1,50 @@
+{
+  "_note": "Synthetic practice information for the fictional Hausarztpraxis Dr. Weber. Spoken text, two or three sentences per entry. {hours} is filled from db/seed.py OPENING_HOURS.",
+  "entries": [
+    {
+      "id": "opening_hours",
+      "de": "Die Praxis ist {hours} Am Wochenende ist die Praxis geschlossen.",
+      "en": "The practice is open {hours} The practice is closed at the weekend."
+    },
+    {
+      "id": "address",
+      "de": "Die Praxis ist in der Musterstraße 12 in 12345 Musterstadt, im ersten Stock mit Aufzug. Die nächste Bushaltestelle ist Musterplatz, etwa zwei Minuten zu Fuß.",
+      "en": "The practice is at Musterstraße 12 in 12345 Musterstadt, on the first floor with a lift. The nearest bus stop is Musterplatz, about two minutes on foot."
+    },
+    {
+      "id": "parking",
+      "de": "Direkt hinter dem Haus gibt es vier Parkplätze für Patienten, einer davon ist barrierefrei. Weitere Plätze gibt es im Parkhaus am Musterplatz.",
+      "en": "Right behind the building there are four parking spaces for patients, one of them accessible. More spaces are in the car park at Musterplatz."
+    },
+    {
+      "id": "repeat_prescription",
+      "de": "Folgerezepte für Medikamente, die Sie regelmäßig nehmen, können Sie telefonisch bestellen; ich nehme dafür gern eine Nachricht für das Praxisteam auf. Das Rezept liegt meist nach zwei Werktagen zur Abholung bereit.",
+      "en": "Repeat prescriptions for medication you take regularly can be ordered by phone; I can take a message for the practice team. The prescription is usually ready to collect after two working days."
+    },
+    {
+      "id": "referral",
+      "de": "Eine Überweisung zum Facharzt stellt die Praxis aus, wenn die Ärztin oder der Arzt sie für nötig hält. Für eine laufende Behandlung können Sie eine Überweisung telefonisch anfragen; ich nehme dafür eine Nachricht auf.",
+      "en": "The practice issues a referral to a specialist when the doctor considers it necessary. For ongoing treatment you can request a referral by phone; I can take a message for that."
+    },
+    {
+      "id": "sick_note",
+      "de": "Für eine Krankschreibung brauchen Sie in der Regel einen Termin in der Praxis. Wenn Sie hier schon Patient sind, ist bei leichten Erkrankungen nach Rücksprache mit dem Arzt auch eine telefonische Krankschreibung möglich.",
+      "en": "A sick note usually needs an appointment at the practice. If you are already a patient here, a sick note by phone is possible for mild illness after the doctor has agreed."
+    },
+    {
+      "id": "holidays",
+      "de": "An gesetzlichen Feiertagen ist die Praxis geschlossen. Urlaubszeiten kündigt die Praxis rechtzeitig an; in dieser Zeit übernimmt eine Vertretungspraxis.",
+      "en": "The practice is closed on public holidays. Holiday closures are announced in advance; during that time a covering practice takes over."
+    },
+    {
+      "id": "insurance_card",
+      "de": "Bitte bringen Sie beim ersten Besuch in jedem Quartal Ihre elektronische Gesundheitskarte mit. Ohne Karte kann die Praxis Sie trotzdem behandeln, die Karte muss dann innerhalb von zehn Tagen nachgereicht werden.",
+      "en": "Please bring your electronic health insurance card to your first visit each quarter. Without the card the practice can still treat you, but the card has to be shown within ten days."
+    },
+    {
+      "id": "new_patients",
+      "de": "Die Praxis nimmt neue Patientinnen und Patienten auf. Bitte bringen Sie zum ersten Termin Ihre Gesundheitskarte und, wenn vorhanden, Befunde und Ihren Medikamentenplan mit.",
+      "en": "The practice is accepting new patients. Please bring your health insurance card to your first appointment and, if you have them, previous results and your medication plan."
+    }
+  ]
+}

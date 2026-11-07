@@ -209,6 +209,7 @@ def test_receptionist_registers_all_tools(tmp_path: Path) -> None:
         "find_booking",
         "find_slots",
         "move_booking",
+        "practice_info",
         "take_message",
     ]
     conn.close()

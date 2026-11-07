@@ -10,7 +10,9 @@ what is known about the call (``FilterContext``) and dropped if it:
 - asks "neuer oder bestehender Termin?" although the caller named a day or it was
   already asked (``intent``; bug friday_tomorrow_closed),
 - names a weekday or month that neither the caller, a tool result nor today's date
-  named, i.e. a date the LLM worked out itself (``weekday``).
+  named, i.e. a date the LLM worked out itself (``weekday``),
+- states a practice fact (opening hours, address, parking, ...) that practice_info has
+  not backed in this call (``fact:<kind>``; a closed day is also backed by find_slots).
 
 A sentence with only a claim is held until the next one: a following confirmation
 question ("Stimmt das so?") makes it a read-back and both are released. A dropped
@@ -43,6 +45,7 @@ from praxis_telefon.agent.speech_filters import (
     is_new_or_existing_question,
     mentions_wanted_day,
     meta_reasons,
+    practice_facts,
     unsourced_days,
 )
 from praxis_telefon.safety.phrases import Language
@@ -107,12 +110,23 @@ class FilterContext:
         )
 
 
+# Practice facts (FAQ): only practice_info backs them; a closed day also find_slots, whose
+# result says "Samstag, 14. November: Praxis geschlossen" (user, 2026-11-07).
+FACT_BACKED_BY: dict[str, frozenset[str]] = {"closed": frozenset({"practice_info", "find_slots"})}
+_FACT_DEFAULT = frozenset({"practice_info"})
+
+
 def check_sentence(sentence: str, ctx: FilterContext) -> list[str]:
     """Reasons to drop the sentence; empty if it may be spoken."""
     reasons = [
         f"claim:{action}"
         for action in sorted(sentence_claims(sentence))
         if not BACKED_BY[action] & ctx.succeeded
+    ]
+    reasons += [
+        f"fact:{family}"
+        for family in sorted(practice_facts(sentence))
+        if not FACT_BACKED_BY.get(family, _FACT_DEFAULT) & ctx.succeeded
     ]
     reasons += [f"meta:{why}" for why in meta_reasons(sentence, ctx.language)]
     if is_new_or_existing_question(sentence) and (
@@ -200,6 +214,10 @@ class SentenceFilter:
             return True  # an unbacked claim and the tool is not even being called
         if "intent" in self.blocked and not self.tool_calls:
             return True  # the dropped question was the reply
+        if any(r.startswith("fact:") for r in self.blocked) and (
+            "practice_info" not in self.tool_calls
+        ):
+            return True  # a practice fact from memory; practice_info is not being called
         return bool(self.blocked) and not self.spoken and not self.tool_calls
 
 

@@ -88,6 +88,16 @@ class InvalidReasonCategory(ToolFailure):
     message = "Bitte eine der vorgegebenen Kategorien für das Anliegen wählen."
 
 
+class InvalidTopic(ToolFailure):
+    # FAQ measurement 2026-11-07: the LLM sent "weekend"; it must pick a listed topic.
+    code = "invalid_topic"
+    message = (
+        "Unbekanntes Thema. Wähle eines von: opening_hours, address, parking, "
+        "repeat_prescription, referral, sick_note, holidays, insurance_card, "
+        "new_patients, other."
+    )
+
+
 class BookingDisabled(ToolFailure):
     code = "booking_disabled"
     message = (

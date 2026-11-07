@@ -31,5 +31,5 @@ def _schemas(agent: type[Receptionist]) -> dict[str, dict[str, Any]]:
 
 def test_english_copy_sends_the_production_tool_schemas() -> None:
     production = _schemas(Receptionist)
-    assert len(production) == 6
+    assert len(production) == 7  # practice_info (M3 Part C) is inherited unchanged
     assert _schemas(EnglishToolDocsReceptionist) == production
