@@ -97,6 +97,8 @@ def test_typed_input_counts_by_the_detector_alone() -> None:
         ("Can we speak German?", "de"),
         ("Do you speak German?", "de"),
         ("Können wir bitte auf Deutsch weitermachen?", "de"),
+        ("Können wir wieder Deutsch sprechen?", "de"),
+        ("Can we please speak English again?", "en"),
     ],
 )
 def test_explicit_request_switches_immediately(text: str, wanted: str) -> None:
@@ -157,3 +159,88 @@ def test_each_final_is_logged_with_labels_only(
         "call_language": "de",
     }  # fmt: skip
     assert all(word not in caplog.text for word in ("Termin", "appointment", "Weber"))
+
+
+@pytest.mark.parametrize("text", ["English.", "english", "Englisch!", "Inglisch.", " English? "])
+def test_one_language_word_as_the_whole_utterance_is_a_request(text: str) -> None:
+    # User decision 2026-11-07 (option B): the bilingual repeat message says "just say
+    # 'English'"; the word counts only when it is all the caller said.
+    assert language_request(text) == "en"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "English is not my first language.",
+        "Mein Englisch ist nicht so gut.",
+        "Ich hatte Englisch in der Schule.",
+        "Englischer Garten.",
+        "Inglisch und Deutsch.",
+    ],
+)
+def test_language_word_inside_a_sentence_is_not_a_request(text: str) -> None:
+    assert language_request(text) is None
+
+
+@pytest.mark.parametrize("text", ["English please", "English, please.", "Englisch bitte!"])
+def test_language_word_with_please_as_the_whole_utterance_is_a_request(text: str) -> None:
+    # Own recording 03 (2026-11-07): en wrote "English please" and no pattern matched.
+    assert language_request(text) == "en"
+
+
+@pytest.mark.parametrize("text", ["Deutsche expression.", "Deutsch.", "German.", "Deutsch bitte"])
+def test_german_word_on_the_en_stream_switches_back(text: str) -> None:
+    # Own recordings 08/09 (2026-11-07): the en stream wrote "Können wir wieder Deutsch
+    # sprechen?" as "Deutsche expression." and "Sprechen Sie Deutsch?" as nothing; the
+    # exact words Deutsch / Deutsche / German on the en stream mean "back to German".
+    english_call = [final(EN, "en"), final(EN2, "en")]
+    assert final(text, "en").request == "de"
+    assert lang(*english_call, final(text, "en")) == "de"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "My name is Deutschmann.",
+        "This is Anna Deutschländer speaking.",
+        "I live in Deutschland.",
+    ],
+)
+def test_name_with_deutsch_does_not_switch_back(text: str) -> None:
+    # User decision 2026-11-07: exact words only, so a name like Deutschmann stays English.
+    assert final(text, "en").request is None
+
+
+def test_german_word_counts_only_on_the_en_stream() -> None:
+    # On de (or typed input) "Deutsch" inside a sentence is just a word.
+    assert final("Ich spreche Deutsch mit Akzent.", "de").request is None
+    assert final("Ich spreche Deutsch mit Akzent.", None).request is None
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["I have German health insurance.", "Is the doctor German?", "My wife is German."],
+)
+def test_german_inside_a_normal_sentence_does_not_switch_back(text: str) -> None:
+    # User decision 2026-11-07: "German" only as the whole utterance or inside a request;
+    # "Deutsch" / "Deutsche" anywhere on the en stream.
+    assert final(text, "en").request is None
+
+
+@pytest.mark.parametrize(
+    "text", ["German.", "German, please.", "Can we speak German?", "Do you speak German?"]
+)
+def test_german_alone_or_in_a_request_switches_back(text: str) -> None:
+    assert final(text, "en").request == "de"
+
+
+def test_doish_on_the_en_stream_means_german() -> None:
+    # Own recording 11 (2026-11-07): en wrote "Deutsch." as "Doish".
+    assert final("Doish", "en").request == "de"
+    assert final("Doish", "de").request is None
+
+
+def test_the_call_remembers_its_first_language() -> None:
+    assert decide([final(DE, "de"), final("English.", "de")]).first_language == "de"
+    assert decide([final(EN, "en")]).first_language == "en"
+    assert decide([final(NEUTRAL, "en")]).first_language is None

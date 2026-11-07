@@ -47,9 +47,21 @@ FIXED_MESSAGES: dict[tuple[ActionKind, Language], str] = {
         "I am sorry, I am having trouble understanding you. I can take a message for the "
         "practice team, and they will call you back. Would you like that?"
     ),
+    # Ends in English: an English caller on the de stream gets empty transcripts; "English"
+    # alone switches (agent/call_language.py; user decision 2026-11-07).
     ("repeat", "de"): "Entschuldigung, das habe ich nicht verstanden. Können Sie das bitte "
-    "noch einmal sagen?",
-    ("repeat", "en"): "Sorry, I did not catch that. Could you please say it again?",
+    "noch einmal sagen? If you'd like to speak English, just say 'English'.",
+    # The en stream hears German poorly; "Deutsch" alone switches back (call_language.py).
+    # "Deutsch, bitte", not "Deutsch": own recordings 2026-11-07, en wrote "Deutsch." as
+    # "Doish" and "Deutsch, bitte." as "Deutsche".
+    ("repeat", "en"): "Sorry, I did not catch that. Could you please say it again? Wenn Sie "
+    "Deutsch sprechen möchten, sagen Sie einfach 'Deutsch, bitte'.",
+    # An empty final on the en stream in a call that started German: the stream is back on
+    # de, so the caller says it again in German (agent/receptionist.py). Not a strike.
+    ("switch_back", "de"): "Entschuldigung, bitte sagen Sie das noch einmal. Sorry, please "
+    "say that again.",
+    ("switch_back", "en"): "Entschuldigung, bitte sagen Sie das noch einmal. Sorry, please "
+    "say that again.",
 }
 
 # Crisis messages must be heard in full.

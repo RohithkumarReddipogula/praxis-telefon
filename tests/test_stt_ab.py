@@ -257,3 +257,12 @@ def test_report_on_made_up_transcripts() -> None:
     assert [r["right"] for r in rows] == [True, True, False, False]
     text = render(rows)
     assert "'rejected': True" in text and "combined_drop_points': 100.0" in text
+
+
+def test_switch_check_cases() -> None:
+    from eval.stt_ab.switch_check import cases
+
+    found = cases(ALL)
+    assert [to for _, _, to in found] == ["en"] * 5 + ["de"] * 5
+    assert all(r.kind == "name" and r.group == "de" for r, _, _ in found)
+    assert all(p.kind == "phone" and p.group == to for _, p, to in found)

@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import logging
 import uuid
+from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
@@ -39,6 +40,7 @@ from praxis_telefon.agent.unrecognized_speech import attach_unrecognized_speech
 from praxis_telefon.config import Settings
 from praxis_telefon.db.schema import PRACTICE_TZ, connect
 from praxis_telefon.logging_privacy import install_pii_filter
+from praxis_telefon.safety.phrases import Language
 
 logger = logging.getLogger("praxis_telefon.turns")
 
@@ -89,6 +91,19 @@ def stt_options(settings: Settings) -> dict[str, Any]:
     if settings.stt_language_hint:
         opts["language_hint"] = list(settings.stt_language_hint)
     return opts
+
+
+def stt_switcher(settings: Settings, session: Any) -> Callable[[Language], None] | None:
+    """Option B (docs/experiments/stt-language.md): the Deepgram stream follows the call
+    language (de, en on an explicit request). Off when STT_LANGUAGE fixes the language."""
+    if settings.stt_language:
+        return None
+
+    def switch(language: Language) -> None:
+        if session.stt is not None:
+            session.stt.update_options(language=language)  # reconnects the stream
+
+    return switch
 
 
 def openrouter_provider() -> OpenRouterProviderPreferences:
@@ -212,7 +227,7 @@ async def entrypoint(ctx: JobContext) -> None:
     ctx.add_shutdown_callback(release_console_audio)
 
     # record=False: do not upload call audio/transcripts to LiveKit Cloud observability.
-    agent = Receptionist(service)
+    agent = Receptionist(service, on_language_change=stt_switcher(settings, session))
     # Caller spoke but STT produced nothing: counts as a strike (two in a row: handover).
     attach_unrecognized_speech(session, agent.on_unrecognized_speech)
 

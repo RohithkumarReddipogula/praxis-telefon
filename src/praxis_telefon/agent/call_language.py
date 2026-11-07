@@ -10,7 +10,10 @@ call. Rule (user, 2026-11-07):
   directions. Before the caller said anything German, one English final is enough (an
   English caller's first line gets an English answer).
 - Finals that show no language ("Ja.", digits, a name) neither count nor break a run.
-- An explicit request ("Can we speak English?", "Sprechen Sie Deutsch?") switches at once.
+- An explicit request ("Can we speak English?", "Sprechen Sie Deutsch?") switches at once;
+  so does "English" / "Englisch" / "Inglisch" (with "please" / "bitte") as the whole
+  utterance; "German" / "Deutsch" alone means German, and on the en stream so does
+  "Deutsch" or "Deutsche" anywhere in the final.
 
 Like the safety state, the language is replayed from the recorded finals every time, so
 a discarded preemptive LLM run cannot change it. A final keeps only labels, never the
@@ -21,7 +24,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from praxis_telefon.agent.speech_filters import detect_language
 from praxis_telefon.safety.phrases import Language
@@ -36,10 +39,12 @@ _DE = r"(?:german|deutsch)"
 def _request(lang: str, other: str) -> re.Pattern[str]:
     # On normalize()d text: lower case, umlauts folded, punctuation removed.
     return re.compile(
-        rf" (?:can|could|may|shall) we (?:please )?(?:speak|talk|continue) (?:in )?{lang} "
+        rf" (?:can|could|may|shall) we (?:(?:please|now|again) )*(?:speak|talk|continue) "
+        rf"(?:in )?{lang} "
         rf"| do you (?:also )?speak {lang} "
         rf"| (?:speak|talk|continue) (?:in )?{lang} please "
-        rf"| koennen wir (?:bitte )?(?:auf |in )?{lang} (?:sprechen|reden|weitermachen) "
+        rf"| koennen wir (?:(?:bitte|wieder|jetzt) )*(?:auf |in )?{lang} "
+        rf"(?:sprechen|reden|weitermachen) "
         rf"| sprechen sie (?:auch )?{lang} "
         rf"| (?:bitte )?auf {lang} bitte "
         rf"| i (?:don t|do not|can t|cannot) speak (?:any |much )?{other} "
@@ -53,8 +58,24 @@ _REQUESTS: tuple[tuple[Language, re.Pattern[str]], ...] = (
 )
 
 
+# Only as the whole utterance (user, 2026-11-07): the bilingual "say that again" message
+# tells English callers to "just say 'English'"; "Inglisch" is how de may write it.
+_ENGLISH_WORD = re.compile(r"\s*(?:english|englisch|inglisch)(?: please| bitte)?\s*")
+# On the en stream only (own recordings 2026-11-07: en wrote "Können wir wieder Deutsch
+# sprechen?" as "Deutsche expression." and "Sprechen Sie Deutsch?" as nothing): these
+# exact words mean back to German. Exact words, so "Deutschmann" does not switch.
+# "German" only alone or in a request ("I have German health insurance" is no request).
+# "doish": own recording 11, en's spelling of "Deutsch.".
+_GERMAN_WORDS = frozenset({"deutsch", "deutsche", "doish"})
+_GERMAN_WORD = re.compile(r"\s*(?:german|deutsch)(?: please| bitte)?\s*")
+
+
 def language_request(text: str) -> Language | None:
     """The language the caller explicitly asks for, if any."""
+    if _ENGLISH_WORD.fullmatch(normalize(text)):
+        return "en"
+    if _GERMAN_WORD.fullmatch(normalize(text)):
+        return "de"
     n = f" {normalize(text)} "
     for language, pattern in _REQUESTS:
         if pattern.search(n):
@@ -83,7 +104,11 @@ class CallerFinal:
 
     @classmethod
     def from_text(cls, text: str, stt_language: str | None = None) -> CallerFinal:
-        return cls(_tag(stt_language), detect_language(text), language_request(text))
+        tag = _tag(stt_language)
+        request = language_request(text)
+        if request is None and tag == "en" and _GERMAN_WORDS & set(normalize(text).split()):
+            request = "de"
+        return cls(tag, detect_language(text), request)
 
 
 def vote(final: CallerFinal) -> Language | None:
@@ -103,28 +128,34 @@ class LanguageState:
     run: int = 0  # consecutive finals in the other language
     german_heard: bool = False
     english_heard: bool = False  # any English final or request: the LLM gets a note
+    first_language: Language | None = None  # of the first final that showed one
 
 
 def step(state: LanguageState, final: CallerFinal) -> LanguageState:
-    if final.request is not None:
-        return LanguageState(
-            final.request,
-            0,
-            state.german_heard or final.request == "de",
-            state.english_heard or final.request == "en",
-        )
-    v = vote(final)
-    if v is None:
+    shown = final.request if final.request is not None else vote(final)
+    if shown is None:
         return state
-    german_heard = state.german_heard or v == "de"
-    english_heard = state.english_heard or v == "en"
-    if v == state.language:
-        return LanguageState(v, 0, german_heard, english_heard)
-    if v == "en" and not state.german_heard:
-        return LanguageState("en", 0, german_heard, english_heard)
+    state = replace(
+        state,
+        german_heard=state.german_heard or shown == "de",
+        english_heard=state.english_heard or shown == "en",
+        first_language=state.first_language or shown,
+    )
+    if final.request is not None:
+        return replace(state, language=final.request, run=0)
+    if shown == state.language:
+        return replace(state, run=0)
+    if shown == "en" and not state.german_heard:  # nothing German yet: one final is enough
+        return replace(state, language="en", run=0)
     run = state.run + 1
-    language = v if run >= FINALS_TO_SWITCH else state.language
-    return LanguageState(language, 0 if language == v else run, german_heard, english_heard)
+    if run >= FINALS_TO_SWITCH:
+        return replace(state, language=shown, run=0)
+    return replace(state, run=run)
+
+
+# Recorded by Receptionist when an empty final on the en stream, in a call that started
+# German, switches back to de (the caller most likely spoke German; user, 2026-11-07).
+SWITCH_BACK = CallerFinal(stt="en", detected=None, request="de")
 
 
 def decide(finals: Iterable[CallerFinal]) -> LanguageState:

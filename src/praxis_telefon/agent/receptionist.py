@@ -75,13 +75,20 @@ def _tool_name(tool: llm.Tool) -> str:
 
 
 class Receptionist(Agent):
-    def __init__(self, service: ToolService) -> None:
+    def __init__(
+        self,
+        service: ToolService,
+        on_language_change: Callable[[Language], None] | None = None,
+    ) -> None:
         super().__init__(instructions=build_instructions(service.now()))
         self._service = service
         self._unrecognized_at: list[float] = []
         self._pending: Action | None = None
         self._logged_ids: set[str] = set()
         self._finals: list[call_language.CallerFinal] = []
+        # Switches the Deepgram stream when the call language changes (option B,
+        # main.stt_switcher); None in text mode or with a fixed STT_LANGUAGE.
+        self._on_language_change = on_language_change
         service.booking_allowed = lambda: self.safety_state().mode is Mode.NORMAL
 
     # --- safety state ------------------------------------------------------------------
@@ -103,6 +110,9 @@ class Receptionist(Agent):
 
     def on_unrecognized_speech(self) -> Any:
         """Called when the caller spoke but STT produced nothing. Returns the SpeechHandle."""
+        if self._switch_back_on_empty():
+            self._pending = Action("switch_back", "de")
+            return self.session.generate_reply(allow_interruptions=True)
         self._unrecognized_at.append(time.time())
         _, action = replay(self._events(self.chat_ctx))
         self._log(action, key=f"unrecognized-{len(self._unrecognized_at)}")
@@ -120,20 +130,45 @@ class Receptionist(Agent):
 
     # --- call language -----------------------------------------------------------------
 
+    def _switch_back_on_empty(self) -> bool:
+        """An empty final on the en stream in a call that started German: the caller most
+        likely spoke German (en heard "Sprechen Sie Deutsch?" as nothing). Back to de, no
+        strike (user decision 2026-11-07)."""
+        state = call_language.decide(self._finals)
+        if (
+            self._on_language_change is None
+            or state.language != "en"
+            or state.first_language != "de"
+        ):
+            return False
+        self._finals.append(call_language.SWITCH_BACK)
+        self._on_language_change("de")
+        record = {"event": "stt_language_switch", "to": "de", "reason": "empty_en_final"}
+        language_logger.info(json.dumps(record, separators=(",", ":")))
+        return True
+
     def record_final(self, text: str, stt_language: str | None) -> None:
         """One final transcript, kept as language labels only (agent/call_language.py)."""
         if not text.strip():
             return
         final = call_language.CallerFinal.from_text(text, stt_language)
+        before = call_language.decide(self._finals).language
         self._finals.append(final)
+        after = call_language.decide(self._finals).language
         record = {
             "event": "caller_final",
             "stt": final.stt,
             "detected": final.detected,
             "request": final.request,
-            "call_language": call_language.decide(self._finals).language,
+            "call_language": after,
         }  # labels only, never the caller's words
         language_logger.info(json.dumps(record, separators=(",", ":")))
+        if after != before and self._on_language_change is not None:
+            # Right after the final that switched it: the caller has just stopped talking.
+            self._on_language_change(after)
+            language_logger.info(
+                json.dumps({"event": "stt_language_switch", "to": after}, separators=(",", ":"))
+            )
 
     async def stt_node(
         self, audio: AsyncIterable[rtc.AudioFrame], model_settings: ModelSettings

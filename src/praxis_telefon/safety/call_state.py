@@ -37,7 +37,9 @@ class Mode(StrEnum):
     HANDOVER = "handover"  # booking off; offer and take a message for the team
 
 
-ActionKind = Literal["none", "emergency", "suicide", "human_request", "handover_strikes", "repeat"]
+ActionKind = Literal[
+    "none", "emergency", "suicide", "human_request", "handover_strikes", "repeat", "switch_back"
+]  # switch_back: set by Receptionist (agent/call_language.py), never by replay
 
 
 @dataclass(frozen=True)
