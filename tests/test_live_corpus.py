@@ -42,7 +42,7 @@ def _blocked(group: dict[str, Any]) -> list[str]:
     released: list[str] = []
     for sentence in group["sentences"]:
         released += sf.push(sentence)
-    sf.finish()
+    released += sf.finish()
     return [s.strip() for s in group["sentences"] if s not in released]
 
 

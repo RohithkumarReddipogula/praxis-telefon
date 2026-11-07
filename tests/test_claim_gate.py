@@ -436,3 +436,73 @@ def test_reading_out_an_existing_appointment_is_not_a_claim(
     text, _ = _reply(agent, ctx=_ctx_with_success(agent, "find_booking", found))
     assert text == reply
     assert len(fake.contexts) == 1
+
+
+# --- regression: live run 2026-11-07, book_move_cancel_in_one_call[0] -------------------
+
+
+def test_read_back_with_one_sentence_before_the_question_is_spoken() -> None:
+    # The move read-back was blocked as claim:move_booking: the confirmation question
+    # came two sentences after the claim, with the name and date of birth between.
+    from praxis_telefon.agent.claim_gate import FilterContext, SentenceFilter
+
+    sentences = [
+        "Das ist Mittwoch, der 11. November, um 8 Uhr bei Dr. Brandt, und Ihr jetziger "
+        "Termin am Dienstag, dem 10. November, um 8 Uhr bei Dr. Brandt wird dorthin verlegt. ",
+        "Für Max Mustermann, geboren am ersten Februar neunzehnhundertneunundsiebzig. ",
+        "Soll ich das so ändern?",
+    ]
+    callers = (
+        "Ach, Dienstag passt doch nicht. Können Sie den Termin auf Mittwoch vormittags "
+        "verschieben?",
+        "Der erste Termin passt mir.",
+    )
+    found = "Gesucht: Mittwoch, 11. November.\nslot_id=12: Mittwoch, 11. November, um 8 Uhr"
+    ctx = FilterContext(
+        succeeded=frozenset({"book", "find_slots"}), caller_texts=callers, tool_texts=(found,)
+    )
+    sf = SentenceFilter(ctx)
+    released = [s for sentence in sentences for s in sf.push(sentence)]
+    sf.finish()
+    assert released == sentences
+    assert sf.blocked == []
+
+
+def test_claim_without_a_question_after_one_more_sentence_is_still_blocked() -> None:
+    from praxis_telefon.agent.claim_gate import FilterContext, SentenceFilter
+
+    sentences = [
+        "Ihr Termin wurde auf Mittwoch verlegt. ",
+        "Für Max Mustermann. ",
+        "Kann ich sonst noch etwas für Sie tun?",
+    ]
+    ctx = FilterContext(succeeded=frozenset({"book"}), caller_texts=("Geht auch Mittwoch?",))
+    sf = SentenceFilter(ctx)
+    released = [s for sentence in sentences for s in sf.push(sentence)]
+    sf.finish()
+    assert "Ihr Termin wurde auf Mittwoch verlegt. " not in released
+    assert released == sentences[1:]  # the sentence between is spoken after all
+    assert sf.blocked == ["claim:move_booking"]
+
+
+def test_sentence_held_after_a_claim_at_the_end_of_a_reply_is_spoken() -> None:
+    # With the read-back gap, a clean sentence may still be held when the stream ends.
+    from praxis_telefon.agent.claim_gate import FilterContext, SentenceFilter, filter_claims
+
+    reply = "Ihr Termin ist gebucht. Vielen Dank für Ihren Anruf."
+    sf = SentenceFilter(FilterContext())
+
+    async def run() -> str:
+        out = []
+
+        async def stream() -> AsyncIterator[ChatChunk]:
+            for chunk in _chunks(_words(reply)):
+                yield chunk
+
+        async for chunk in filter_claims(stream(), sf):
+            if isinstance(chunk, str):
+                out.append(chunk)
+        return "".join(out)
+
+    assert asyncio.run(run()) == "Vielen Dank für Ihren Anruf."
+    assert sf.blocked == ["claim:book"]

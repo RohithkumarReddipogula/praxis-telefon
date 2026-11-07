@@ -5,8 +5,8 @@ what is known about the call (``FilterContext``) and dropped if it:
 - claims a saved message, booking, move or cancellation whose tool has not succeeded in
   this call (``claim:<tool>``; bug live test human_request[2]),
 - is the agent talking about itself: its tools, "the caller", a "Hinweis:" note,
-  English while the caller speaks German (``meta:<why>``; bug naechsten_dienstag), or
-  German narration about the request (``meta:narration``; live run arm A explicit_date-0),
+  a sentence not in the call's language (``meta:language``; bug naechsten_dienstag), or
+  narration about the request (``meta:narration``; live run arm A explicit_date-0),
 - asks "neuer oder bestehender Termin?" although the caller named a day or it was
   already asked (``intent``; bug friday_tomorrow_closed),
 - names a weekday or month that neither the caller, a tool result nor today's date
@@ -32,6 +32,7 @@ from typing import Any
 
 from livekit.agents import FlushSentinel, llm
 
+from praxis_telefon.agent import call_language
 from praxis_telefon.agent.claim_check import (
     BACKED_BY,
     is_confirmation_question,
@@ -39,7 +40,6 @@ from praxis_telefon.agent.claim_check import (
     take_sentences,
 )
 from praxis_telefon.agent.speech_filters import (
-    call_language,
     is_new_or_existing_question,
     mentions_wanted_day,
     meta_reasons,
@@ -61,13 +61,20 @@ class FilterContext:
     tool_texts: tuple[str, ...] = ()
     today: str = ""  # "Heute ist Freitag, der 13. November 2026, ..."
     intent_asked: bool = False  # "neuer oder bestehender Termin?" already asked
+    # Decided by Receptionist from the STT finals (agent/call_language.py); None: from
+    # caller_texts by the same rule (typed input, replayed live corpus).
+    decided_language: Language | None = None
 
     @property
     def language(self) -> Language:
-        return call_language(self.caller_texts)
+        if self.decided_language is not None:
+            return self.decided_language
+        return call_language.from_texts(self.caller_texts).language
 
     @classmethod
-    def from_chat(cls, chat_ctx: llm.ChatContext, today: str) -> FilterContext:
+    def from_chat(
+        cls, chat_ctx: llm.ChatContext, today: str, language: Language | None = None
+    ) -> FilterContext:
         succeeded: set[str] = set()
         callers: list[str] = []
         tools: list[str] = []
@@ -81,7 +88,7 @@ class FilterContext:
                 tools.append(item.output)
                 if not item.is_error:
                     succeeded.add(item.name)
-        return cls(frozenset(succeeded), tuple(callers), tuple(tools), today, asked)
+        return cls(frozenset(succeeded), tuple(callers), tuple(tools), today, asked, language)
 
     def to_json(self) -> dict[str, Any]:
         data = asdict(self)
@@ -96,6 +103,7 @@ class FilterContext:
             tuple(data["tool_texts"]),
             data["today"],
             data["intent_asked"],
+            data.get("decided_language"),
         )
 
 
@@ -121,6 +129,9 @@ SentenceHook = Callable[["SentenceFilter", str], None]
 SENTENCE_HOOK: SentenceHook | None = None
 
 
+READ_BACK_GAP = 1  # clean sentences allowed between a claim and its confirmation question
+
+
 @dataclass
 class SentenceFilter:
     ctx: FilterContext
@@ -128,7 +139,9 @@ class SentenceFilter:
     spoken: list[str] = field(default_factory=list)
     blocked: list[str] = field(default_factory=list)  # reasons, in order, unique
     tool_calls: set[str] = field(default_factory=set)
-    _held: tuple[str, list[str]] | None = None
+    # A claim sentence waiting for its confirmation question, the clean sentences said
+    # after it (at most READ_BACK_GAP), and the claim's reasons.
+    _held: tuple[str, list[str], list[str]] | None = None
 
     def push(self, sentence: str) -> list[str]:
         if SENTENCE_HOOK is not None:
@@ -136,15 +149,22 @@ class SentenceFilter:
         out: list[str] = []
         reasons = check_sentence(sentence, self.ctx)
         if self._held is not None:
-            held, held_reasons = self._held
+            held, between, held_reasons = self._held
             self._held = None
             if not reasons and is_confirmation_question(sentence):  # a read-back
-                out += [held, sentence]
+                out += [held, *between, sentence]
                 self.spoken += out
                 return out
+            if not reasons and not sentence.strip().endswith("?") and len(between) < READ_BACK_GAP:
+                # Live run 2026-11-07: "... wird dorthin verlegt. Für Max Mustermann, geboren
+                # am .... Soll ich das so ändern?" The question may come one sentence later.
+                self._held = (held, [*between, sentence], held_reasons)
+                return out
             self._block(held_reasons)
+            self.spoken += between
+            out += between
         if reasons and all(r.startswith("claim:") for r in reasons):
-            self._held = (sentence, reasons)
+            self._held = (sentence, [], reasons)
         elif reasons:
             self._block(reasons)
         else:
@@ -152,10 +172,15 @@ class SentenceFilter:
             out.append(sentence)
         return out
 
-    def finish(self) -> None:
-        if self._held is not None:
-            self._block(self._held[1])
-            self._held = None
+    def finish(self) -> list[str]:
+        """Blocks a claim still waiting; returns the clean sentences held after it."""
+        if self._held is None:
+            return []
+        _, between, held_reasons = self._held
+        self._held = None
+        self._block(held_reasons)
+        self.spoken += between
+        return between
 
     def _block(self, reasons: list[str]) -> None:
         for reason in reasons:
@@ -212,4 +237,5 @@ async def filter_claims(stream: AsyncIterable[Output], sf: SentenceFilter) -> As
     if buffer.strip():
         for out in sf.push(buffer):
             yield out
-    sf.finish()
+    for out in sf.finish():
+        yield out

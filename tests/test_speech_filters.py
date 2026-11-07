@@ -218,9 +218,11 @@ def test_weekday_from_the_tool_result_is_spoken(
 def test_weekday_named_by_the_caller_in_another_language_is_spoken(
     agent: Receptionist, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    # A German call (one English line does not switch it, agent/call_language.py).
     reply = "Gern, ich schaue für Donnerstag nach. "
     _install(monkeypatch, ScriptedLLM([*_words(reply), ("tool", "find_slots")]))
-    text, _ = _reply(agent, "Do you have anything next Thursday?")
+    ctx = _ctx_with_callers(agent, "Guten Tag, ich hätte gern einen Termin.")
+    text, _ = _reply(agent, "Do you have anything next Thursday?", ctx)
     assert text == reply
 
 
@@ -336,3 +338,135 @@ def test_weekday_next_to_a_date_of_birth_is_still_blocked(sentence: str) -> None
 
     ctx = FilterContext(caller_texts=("Haben Sie morgen etwas frei?",))
     assert "weekday" in check_sentence(sentence, ctx)
+
+
+# --- E: the call's language is decided by code (agent/call_language.py) ----------------
+
+
+def _ctx_with_callers(agent: Receptionist, *lines: str) -> llm.ChatContext:
+    """Caller lines before the one _reply adds, each followed by a short agent answer."""
+    ctx = agent.chat_ctx.copy()
+    for line in lines:
+        ctx.add_message(role="user", content=line)
+        ctx.add_message(role="assistant", content="Gern.")
+    return ctx
+
+
+def _system_notes(ctx: llm.ChatContext) -> list[str]:
+    return [
+        item.text_content or ""
+        for item in ctx.items
+        if isinstance(item, llm.ChatMessage) and item.role == "system"
+    ]
+
+
+def test_one_final_tagged_en_does_not_switch_a_german_call(
+    agent: Receptionist, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Voice test 2026-11-07 (STT_LANGUAGE=multi): a German final was tagged en and
+    # transcribed English-looking; the LLM answered in English and 3 sentences were
+    # blocked. Now the call stays German and the LLM is told so.
+    agent.record_final("Guten Tag, ich möchte eine Nachricht hinterlassen.", "de")
+    agent.record_final("Yes, my number is the same, please.", "en")
+    english = "Sure, I will take a message for the team. "
+    fake = ScriptedLLM(_words(english), _words("Gern, ich nehme Ihre Nachricht auf. "))
+    _install(monkeypatch, fake)
+    ctx = _ctx_with_callers(agent, "Guten Tag, ich möchte eine Nachricht hinterlassen.")
+    text, _ = _reply(agent, "Yes, my number is the same, please.", ctx)
+    assert "Sure" not in text
+    assert any("Deutsch" in note for note in _system_notes(fake.contexts[0]))
+
+
+def test_one_english_line_in_a_typed_german_call_keeps_german(
+    agent: Receptionist, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Text mode (no STT tags): the same rule, by the detector alone.
+    fake = ScriptedLLM(_words("Sure, let me check that for you. "), _words("Gern. "))
+    _install(monkeypatch, fake)
+    ctx = _ctx_with_callers(agent, "Guten Tag, ich hätte gern einen Termin.")
+    text, _ = _reply(agent, "Yes, that is right, thank you.", ctx)
+    assert "Sure" not in text
+
+
+def test_two_english_finals_switch_and_the_llm_is_told(
+    agent: Receptionist, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    for line in ("Guten Tag.", "Sorry, do you have anything next Thursday?", "Yes, please."):
+        agent.record_final(line, "de" if line == "Guten Tag." else "en")
+    reply = "Sure, let me check that for you. "
+    fake = ScriptedLLM([*_words(reply), ("tool", "find_slots")])
+    _install(monkeypatch, fake)
+    ctx = _ctx_with_callers(agent, "Guten Tag.", "Sorry, do you have anything next Thursday?")
+    text, _ = _reply(agent, "Yes, thank you, that would be great.", ctx)
+    assert text == reply
+    assert any("English" in note for note in _system_notes(fake.contexts[0]))
+
+
+def test_german_sentence_in_an_english_call_is_dropped(
+    agent: Receptionist, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The language check works both ways now.
+    fake = ScriptedLLM([*_words("Einen Moment, ich schaue für Sie nach. "), ("tool", "find_slots")])
+    _install(monkeypatch, fake)
+    ctx = _ctx_with_callers(agent, "Hello, I would like an appointment, please.")
+    text, calls = _reply(agent, "Do you have anything next Thursday?", ctx)
+    assert text == TOOL_FILLER["en"] + " "
+    assert calls == ["find_slots"]
+
+
+def test_explicit_request_switches_at_once(
+    agent: Receptionist, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    reply = "Of course, how can I help you? "
+    fake = ScriptedLLM(_words(reply))
+    _install(monkeypatch, fake)
+    ctx = _ctx_with_callers(agent, "Guten Tag, hier ist Max Mustermann.")
+    text, _ = _reply(agent, "Können wir Englisch sprechen?", ctx)
+    assert text == reply
+    assert any("English" in note for note in _system_notes(fake.contexts[0]))
+
+
+def test_repeat_message_in_the_call_language(agent: Receptionist) -> None:
+    from praxis_telefon.safety.messages import FIXED_MESSAGES
+
+    ctx = _ctx_with_callers(agent, "Hello, I would like an appointment, please.")
+    text, _ = _reply(agent, "", ctx)
+    assert text == FIXED_MESSAGES[("repeat", "en")]
+
+
+@pytest.mark.parametrize(
+    "leak",
+    [
+        # Spoken reasoning from the live runs (eval/results, 2026-11-06), caught only by the
+        # "English in a German call" check until now.
+        "This is a new appointment request for November 12th, so I'll search for free slots.",
+        "This is a new appointment request.",
+        "This is a request for a new appointment on 12 November, so I'll search for free slots.",
+        "This sounds like a request for a new appointment on the 12th of November.",
+        "This is a new appointment request (free slot on a date), so I search directly.",
+        "I need the booking ID for the existing appointment.",
+        "I need the booking ID of the existing appointment, which I have from the earlier booking.",
+        "Hmm, the first slot listed was Dr. Brandt at 8 Uhr, which is slot 30. I'll book that.",
+    ],
+)
+def test_english_reasoning_is_dropped_in_an_english_call(leak: str) -> None:
+    from praxis_telefon.agent.speech_filters import meta_reasons
+
+    assert meta_reasons(leak, "en") != []
+
+
+@pytest.mark.parametrize(
+    "sentence",
+    [
+        "I'll look up your existing appointment first.",
+        "Sure, let me check that for you.",
+        "This is the practice of Dr. Weber, how can I help you?",
+        "I have three afternoon appointments: at 3 PM with Dr. Brandt or at 3:30 PM.",
+        "Your request has been passed on to our practice team.",
+        "Hello Herr Mustermann, I'd be happy to check that for you.",
+    ],
+)
+def test_english_sentences_like_reasoning_are_kept(sentence: str) -> None:
+    from praxis_telefon.agent.speech_filters import meta_reasons
+
+    assert meta_reasons(sentence, "en") == []

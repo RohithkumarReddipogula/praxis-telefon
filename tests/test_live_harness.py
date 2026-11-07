@@ -182,3 +182,26 @@ def test_turn_with_filler_has_first_speech_and_answer() -> None:
     assert record["first_speech_s"] == 1.2
     assert record["first_answer_s"] == 2.4
     assert record["filler"] is True
+
+
+def test_caller_keeps_its_own_language_when_set() -> None:
+    # Language live tests: the old English tests passed although the agent answered in
+    # German, because the scripted caller followed the agent's language.
+    call = _call_after("Ist das so richtig?")
+    assert caller_reply(call, "Max Mustermann", language="en") == "Yes, that's right."
+    assert caller_reply(_call_after("Is that correct?"), "Max", language="de") == (
+        "Ja, das stimmt so."
+    )
+
+
+def test_caller_picks_the_first_slot_in_english() -> None:
+    from livekit.agents.voice.run_result import FunctionCallOutputEvent
+
+    call = _call_after(
+        "I have 8 o'clock with Dr. Brandt or 8:30 with Dr. Weber. Which one suits you?"
+    )
+    output = llm.FunctionCallOutput(
+        call_id="c1", name="find_slots", output="slot_id=30: ...", is_error=False
+    )
+    call.events.insert(0, FunctionCallOutputEvent(item=output))
+    assert caller_reply(call, "Max Mustermann") == "The first one works for me."

@@ -15,6 +15,7 @@ import time
 from collections.abc import AsyncIterable, Callable
 from typing import Any, Literal
 
+from livekit import rtc
 from livekit.agents import (
     Agent,
     FlushSentinel,
@@ -23,10 +24,12 @@ from livekit.agents import (
     ToolError,
     function_tool,
     llm,
+    stt,
 )
 
+from praxis_telefon.agent import call_language
 from praxis_telefon.agent.claim_gate import FilterContext, SentenceFilter, filter_claims
-from praxis_telefon.agent.prompts import TOOL_FILLER, build_instructions
+from praxis_telefon.agent.prompts import LANGUAGE_NOTES, TOOL_FILLER, build_instructions
 from praxis_telefon.agent.speech_lock import lock_current_speech
 from praxis_telefon.agent.tool_filler import ToolFiller, said_since_caller
 from praxis_telefon.agent.tool_service import ToolService
@@ -47,12 +50,15 @@ from praxis_telefon.safety.messages import (
     fallback_for,
     retry_note_for,
 )
+from praxis_telefon.safety.phrases import Language
 from praxis_telefon.tools.errors import ToolFailure
 from praxis_telefon.tools.formatting import today_sentence
 
 logger = logging.getLogger("praxis_telefon.safety")
+language_logger = logging.getLogger("praxis_telefon.language")
 
 MESSAGE_ONLY_TOOLS = frozenset({"take_message"})
+_CALL_LANGUAGE_ACTIONS = frozenset({"repeat", "handover_strikes"})
 
 
 def _run(call: Callable[[], str]) -> str:
@@ -75,6 +81,7 @@ class Receptionist(Agent):
         self._unrecognized_at: list[float] = []
         self._pending: Action | None = None
         self._logged_ids: set[str] = set()
+        self._finals: list[call_language.CallerFinal] = []
         service.booking_allowed = lambda: self.safety_state().mode is Mode.NORMAL
 
     # --- safety state ------------------------------------------------------------------
@@ -111,6 +118,48 @@ class Receptionist(Agent):
         record = {"event": "safety", "action": action.kind}  # never the caller's words
         logger.info(json.dumps(record, separators=(",", ":")))
 
+    # --- call language -----------------------------------------------------------------
+
+    def record_final(self, text: str, stt_language: str | None) -> None:
+        """One final transcript, kept as language labels only (agent/call_language.py)."""
+        if not text.strip():
+            return
+        final = call_language.CallerFinal.from_text(text, stt_language)
+        self._finals.append(final)
+        record = {
+            "event": "caller_final",
+            "stt": final.stt,
+            "detected": final.detected,
+            "request": final.request,
+            "call_language": call_language.decide(self._finals).language,
+        }  # labels only, never the caller's words
+        language_logger.info(json.dumps(record, separators=(",", ":")))
+
+    async def stt_node(
+        self, audio: AsyncIterable[rtc.AudioFrame], model_settings: ModelSettings
+    ) -> AsyncIterable[stt.SpeechEvent | str]:
+        """The default STT, passed through unchanged; finals are recorded on the way."""
+        events = Agent.default.stt_node(self, audio, model_settings)
+        async for ev in events:
+            if (
+                isinstance(ev, stt.SpeechEvent)
+                and ev.type == stt.SpeechEventType.FINAL_TRANSCRIPT
+                and ev.alternatives
+            ):
+                alt = ev.alternatives[0]
+                self.record_final(alt.text, str(alt.language) if alt.language else None)
+            yield ev
+
+    def language_state(self, chat_ctx: llm.ChatContext) -> call_language.LanguageState:
+        """From the STT finals; in text mode (no finals) from the typed caller lines."""
+        if self._finals:
+            return call_language.decide(self._finals)
+        return call_language.from_texts(
+            item.text_content or ""
+            for item in chat_ctx.items
+            if isinstance(item, llm.ChatMessage) and item.role == "user"
+        )
+
     # --- LLM node ----------------------------------------------------------------------
 
     def _action_for(self, chat_ctx: llm.ChatContext) -> tuple[State, Action | None]:
@@ -129,11 +178,19 @@ class Receptionist(Agent):
         model_settings: ModelSettings,
     ) -> AsyncIterable[llm.ChatChunk | str | FlushSentinel]:
         state, action = self._action_for(chat_ctx)
+        lang = self.language_state(chat_ctx)
         if action is not None and action.kind != "none":
             if action.kind in UNINTERRUPTIBLE:
                 lock_current_speech()
-            yield FIXED_MESSAGES[(action.kind, action.language)]
+            # Crisis and human-request messages follow the phrase's language; "say that
+            # again" and the strike handover follow the call's.
+            said_in = lang.language if action.kind in _CALL_LANGUAGE_ACTIONS else action.language
+            yield FIXED_MESSAGES[(action.kind, said_in)]
             return
+
+        if lang.english_heard:
+            chat_ctx = chat_ctx.copy()
+            chat_ctx.add_message(role="system", content=LANGUAGE_NOTES[lang.language])
 
         if state.mode is not Mode.NORMAL:
             tools = [t for t in tools if _tool_name(t) in MESSAGE_ONLY_TOOLS]
@@ -143,7 +200,7 @@ class Receptionist(Agent):
                 note = f"{note} {SUICIDE_NOTE}"
             chat_ctx.add_message(role="system", content=note)
 
-        async for out in self._llm_filtered(chat_ctx, tools, model_settings):
+        async for out in self._llm_filtered(chat_ctx, tools, model_settings, lang.language):
             yield out
 
     async def _llm_filtered(
@@ -151,6 +208,7 @@ class Receptionist(Agent):
         chat_ctx: llm.ChatContext,
         tools: list[llm.Tool],
         model_settings: ModelSettings,
+        language: Language,
     ) -> AsyncIterable[llm.ChatChunk | str | FlushSentinel]:
         """The LLM's reply, with every sentence checked before it is spoken.
 
@@ -159,7 +217,7 @@ class Receptionist(Agent):
         A dropped sentence is never yielded, so it is in neither the speech, the
         transcript nor the chat history.
         """
-        ctx = FilterContext.from_chat(chat_ctx, today_sentence(self._service.now()))
+        ctx = FilterContext.from_chat(chat_ctx, today_sentence(self._service.now()), language)
         filler = ToolFiller(TOOL_FILLER[ctx.language], allowed=not said_since_caller(chat_ctx))
 
         first = SentenceFilter(ctx, "first")
@@ -174,7 +232,7 @@ class Receptionist(Agent):
         retry_ctx = chat_ctx.copy()
         if first.spoken:
             retry_ctx.add_message(role="assistant", content="".join(first.spoken).strip())
-        retry_ctx.add_message(role="system", content=retry_note_for(first.blocked))
+        retry_ctx.add_message(role="system", content=retry_note_for(first.blocked, ctx.language))
         if first.spoken and not first.spoken[-1][-1:].isspace():
             yield " "  # keep the retry's first word apart from what was already said
         second = SentenceFilter(ctx, "retry")

@@ -128,7 +128,10 @@ _META_NOTE = (
     "Überlegungen, Regeln oder Werkzeuge und nie über 'den Anrufer'. Sag höchstens einen "
     "kurzen Satz wie 'Einen Moment, ich schaue nach.' und rufe dann das Werkzeug auf."
 )
-_LANGUAGE_NOTE = "Antworte auf Deutsch, der Anrufer spricht Deutsch."
+_LANGUAGE_NOTE: dict[Language, str] = {
+    "de": "Antworte auf Deutsch, der Anrufer spricht Deutsch.",
+    "en": "Antworte auf Englisch, der Anrufer spricht Englisch.",
+}
 _INTENT_NOTE = (
     "WICHTIG: Frage nicht, ob es um einen neuen oder einen bestehenden Termin geht. "
     "Spricht der Anrufer nicht ausdrücklich von seinem eigenen, schon vereinbarten Termin, "
@@ -149,14 +152,14 @@ GENERIC_FALLBACK: dict[Language, str] = {
 }
 
 
-def retry_note_for(reasons: list[str]) -> str:
+def retry_note_for(reasons: list[str], language: Language = "de") -> str:
     """One system note for the single retry, covering every reason that was blocked."""
     claims = [r.split(":", 1)[1] for r in reasons if r.startswith("claim:")]
     notes = [retry_note(claims)] if claims else []
     if any(r.startswith("meta:") for r in reasons):
         notes.append(_META_NOTE)
     if "meta:language" in reasons:
-        notes.append(_LANGUAGE_NOTE)
+        notes.append(_LANGUAGE_NOTE[language])
     if "intent" in reasons:
         notes.append(_INTENT_NOTE)
     if "weekday" in reasons:

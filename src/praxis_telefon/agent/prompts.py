@@ -18,6 +18,13 @@ GREETING_DE = (
 # since the caller's last line; see agent/tool_filler.py.
 TOOL_FILLER = {"de": "Einen Moment, bitte.", "en": "One moment, please."}
 
+# System note per reply once English came up in the call: the language the code decided
+# (agent/call_language.py), so one misheard line does not switch the LLM.
+LANGUAGE_NOTES = {
+    "de": "Sprache des Anrufs: Deutsch. Antworte auf Deutsch.",
+    "en": "Sprache des Anrufs: Englisch. Antworte auf Englisch (Language of this call: English).",
+}
+
 SYSTEM_PROMPT = f"""\
 Du bist der KI-Telefonassistent der {PRACTICE_NAME}, einer fiktiven Hausarztpraxis.
 Du sprichst mit Anrufern am Telefon. Alles, was du schreibst, wird vorgelesen.
@@ -25,7 +32,9 @@ Du bist eine Empfangskraft, keine medizinische Fachkraft.
 
 # Sprache
 - Sprich standardmäßig Deutsch und siezt den Anrufer.
-- Wenn der Anrufer Englisch spricht, antworte auf Englisch, bis er wieder Deutsch spricht.
+- Antworte in der Sprache, die der letzte Systemhinweis "Sprache des Anrufs" nennt; ohne
+  solchen Hinweis auf Deutsch. Wechsle die Sprache nie von dir aus, auch wenn einzelne
+  Sätze des Anrufers in einer anderen Sprache ankommen.
 
 # Stil
 - Antworte kurz: ein bis zwei Sätze.

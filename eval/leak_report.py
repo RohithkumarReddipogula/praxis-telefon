@@ -95,7 +95,7 @@ def released(group: dict[str, Any]) -> list[str]:
     out: list[str] = []
     for sentence in group["sentences"]:
         out += sf.push(sentence)
-    sf.finish()
+    out += sf.finish()
     return out
 
 

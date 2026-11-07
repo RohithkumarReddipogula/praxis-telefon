@@ -161,14 +161,6 @@ def detect_language(text: str) -> Language | None:
     return None
 
 
-def call_language(caller_texts: Iterable[str]) -> Language:
-    """Language of the caller's latest turn that shows one; German by default."""
-    for text in reversed(list(caller_texts)):
-        if (lang := detect_language(text)) is not None:
-            return lang
-    return "de"
-
-
 # --- meta talk -----------------------------------------------------------------------------
 
 _META_TOOL = re.compile(
@@ -202,6 +194,18 @@ _META_NARRATION = re.compile(
 )
 
 
+# English reasoning (live runs 2026-11-06, eval/results): in a German call the language
+# check caught it; English calls need patterns: classifying the request ("This is a new
+# appointment request ...") and internal ids ("booking ID", "slot 30").
+_META_EN_NARRATION = re.compile(
+    r"^\s*this (?:is|sounds like|looks like|seems to be|seems like) (?:a|an) "
+    r"(?:\w+ ){0,2}?request\b"
+    r"|\b(?:booking|slot|appointment) ids?\b"
+    r"|\bslot (?:\d+|number \w+)\b",
+    _I,
+)
+
+
 def meta_reasons(sentence: str, language: Language) -> list[str]:
     """Why the sentence is the agent talking about itself rather than to the caller."""
     reasons = []
@@ -211,9 +215,10 @@ def meta_reasons(sentence: str, language: Language) -> list[str]:
         reasons.append("caller")
     if _META_NOTE.search(sentence):
         reasons.append("note")
-    if _META_NARRATION.search(sentence):
+    if _META_NARRATION.search(sentence) or _META_EN_NARRATION.search(sentence):
         reasons.append("narration")
-    if language == "de" and detect_language(sentence) == "en":
+    spoken = detect_language(sentence)
+    if spoken is not None and spoken != language:  # the call's language, decided by code
         reasons.append("language")
     return reasons
 

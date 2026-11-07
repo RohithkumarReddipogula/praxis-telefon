@@ -251,7 +251,11 @@ _CONFIRM = re.compile(
     r"richtig so|darf ich",
     re.I,
 )
-_CHOICE = re.compile(r"\boder\b|\bwelche[rnms]?\b|passt (Ihnen|einer)", re.I)
+_CHOICE = re.compile(
+    r"\boder\b|\bwelche[rnms]?\b|passt (Ihnen|einer)|\bor\b|\bwhich\b|works? (best )?for you|"
+    r"suits? you",
+    re.I,
+)
 _ASKS_IDENTITY = re.compile(
     r"\bnamen?\b|geburtsdatum|geboren|date of birth|birthday|your name", re.I
 )
@@ -343,10 +347,14 @@ _ASKS_DOCTOR = re.compile(
 )
 
 
-def caller_reply(call: Call, identity: str) -> str:
-    """What the scripted caller says next, based on the agent's last reply."""
+def caller_reply(call: Call, identity: str, language: str | None = None) -> str:
+    """What the scripted caller says next, based on the agent's last reply.
+
+    In the agent's language, unless ``language`` fixes the caller's own (language tests:
+    a caller who follows the agent cannot show that the agent answered wrongly).
+    """
     text = call.last_agent_text()
-    lang = detect_language(text) or "de"
+    lang = language or detect_language(text) or "de"
 
     def say(key: str) -> str:
         return REPLIES[key][lang].format(identity=identity)
@@ -404,10 +412,12 @@ def converse(
     *,
     setup: Setup | None = None,
     clock: Callable[[], datetime] | None = None,
+    caller_language: str | None = None,
 ) -> list[Call]:
     """Run one call; returns the events per step.
 
-    ``setup`` runs after the session starts; ``clock`` replaces the fixed NOW.
+    ``setup`` runs after the session starts; ``clock`` replaces the fixed NOW;
+    ``caller_language`` keeps the scripted caller's answers in that language.
     """
     from dotenv import load_dotenv
 
@@ -452,7 +462,7 @@ def converse(
                     for _ in range(MAX_REPLIES):
                         if step.until(call):
                             break
-                        await say(call, caller_reply(call, identity))
+                        await say(call, caller_reply(call, identity, caller_language))
 
     asyncio.run(run())
     return calls
