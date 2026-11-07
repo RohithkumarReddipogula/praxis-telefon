@@ -45,17 +45,20 @@ uv run python -m praxis_telefon.agent.main dev              # LiveKit Cloud (nee
   - `receptionist.py` – `llm_node`: safety screening, then the LLM through the sentence filter
   - `claim_gate.py` / `claim_check.py` / `speech_filters.py` – checks every sentence before
     it is spoken (claims, meta talk, new-or-existing question, self-computed weekdays)
+  - `tool_filler.py` – code-spoken "Einen Moment, bitte." when a reply calls a tool silently
+  - `main.py` – `build_llm`: OpenRouter with prompt caching and a per-call `session_id`
 - `src/praxis_telefon/safety/` – deterministic emergency/suicide/human-request checks,
   two-strike handover, fixed messages
 - `src/praxis_telefon/tools/` – LLM-callable functions (typed, pure where possible);
   `relative_dates.py` turns the caller's words into dates
 - `src/praxis_telefon/db/` – SQLite schema, access layer, synthetic seed data (28 days)
-- `eval/` – scripted conversation scenarios and scoring
+- `eval/` – scripted conversation scenarios and scoring; `leak_report.py` compares live runs
+- `docs/experiments/` – experiment write-ups (`reasoning-leak.md`)
 - `tests/` – unit and regression tests; no network or API keys required
   - `tests/live/` – live LLM tests (`harness.py`: scripted caller, text-mode session)
   - `tests/data/` – live sentence corpus and reviewed known-bad sentences
 
-## Status (M3, as of 2026-11-06)
+## Status (M3, as of 2026-11-07)
 
 Done and pushed:
 - **Part A, safety:** emergency and suicide phrases (DE/EN) get fixed, uninterruptible
@@ -65,18 +68,37 @@ Done and pushed:
   preemptive runs cannot change state.
 - **Part B, relative dates:** `find_slots(when=...)` takes the caller's words; code
   resolves them in Europe/Berlin (weekdays, ranges, closed days, DST, 28-day horizon).
+- **Part B, reasoning leak** (`docs/experiments/reasoning-leak.md`): 2×2 experiment, 5
+  cached runs per arm. **Reasoning effort `low` adopted** (0 vs 27 leaked sentences, p=0.008;
+  +58 ms `llm_ttft`); German tool descriptions rejected (no effect, 7 test failures). The
+  user's `.env` is on `low`; `.env.example` and the code default are too.
+- **Prompt caching on:** `cache_control` (Anthropic automatic caching) and a random
+  `session_id` per call via OpenRouter; about 80 % of prompt tokens read from the cache,
+  live run $0.14 → $0.055; no measurable latency change.
+- **Code-spoken filler:** with `low` the agent no longer says a preamble before tools, so
+  `tool_filler.py` says one when a reply calls a tool and said nothing since the caller's
+  line (at most once per turn). Caller line to first speech p50 2128 → 1212 ms; the
+  answer is not delayed. Turn log marks it (`is_filler`) and has `since_caller_s`.
 - **Fixes since:** spoken callback numbers converted to digits; sentence filter blocks
-  unbacked claims (only the matching tool backs a claim), spoken reasoning, repeated or
-  unneeded new-or-existing questions, and weekdays the LLM worked out; at most one retry
-  per reply, then a fixed sentence. False-positive check: corpus of 149 passing live tests.
-- Last live run: 75/75 passed (safety, tool calls, dates).
+  unbacked claims (only the matching tool backs a claim), spoken reasoning (incl. German
+  narration such as "Das ist ein Terminwunsch …"), repeated or unneeded new-or-existing
+  questions, and weekdays or months the LLM worked out (today's date backs only its
+  weekday); at most one retry per reply, then a fixed sentence. False-positive check:
+  corpus of 149 passing live tests.
+- Live harness records timings, token counts and config per test (`LIVE_CORPUS`);
+  `uv run python -m eval.leak_report eval/results/*.jsonl` compares runs.
+- Last live run: 3 × 78/78 passed (reasoning `low`, caching and filler on).
 
 Open:
-- **Reasoning leak frequency:** Haiku (reasoning "none") still narrates before tool calls,
-  often in English (13 sentences blocked in 75 live tests). The filter catches it; worth
-  trying reasoning "low" or German tool descriptions and measuring e2e.
+- **First speech p90 for direct answers:** turns without a tool get no filler, and with
+  `low` the model sometimes thinks long first (first speech p90 3.4 s). Options: a
+  timer-based filler or a shorter thinking time; not built.
+- **Real end-to-end check:** a console session by the user; read `e2e_s`, `is_filler` and
+  `since_caller_s` from the turn log.
 - **Part B, English switching (next):** A/B measurement of Deepgram `de` vs `multi` on
-  synthetic ElevenLabs audio (a few cents; ask before running), then decide.
+  synthetic ElevenLabs audio (ask before running); reject `multi` if German accuracy on
+  names, dates of birth and phone digits drops by more than 2 percentage points vs `de`.
+  English calls also need meta detection without the language check.
 - **Part C not started:** FAQ with local retrieval, barge-in tuning.
 - Afterwards: README and CLAUDE.md update for all of M3; the user's local
   `data/praxis.db` must be reseeded for 28 days (`... db.seed --reset`, the user runs it).
