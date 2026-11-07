@@ -18,6 +18,9 @@ SUPPORTED_TTS_PROVIDERS = ("elevenlabs",)
 SUPPORTED_LANGUAGES = ("de", "en")
 # Deepgram language; "" follows DEFAULT_LANGUAGE. "multi": docs/experiments/stt-language.md
 STT_LANGUAGES = ("de", "en", "multi")
+# Deepgram language_hint, multi only (voice test 2026-11-07: multi tagged accented German
+# as Telugu); opt-in until a voice test shows it helps.
+STT_HINT_LANGUAGES = ("de", "en")
 LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
 # OpenRouter `reasoning_effort`. Gemini 3.x Flash reasons mandatorily (lowest: "low");
 # Claude Haiku 5.5 accepts "none".
@@ -43,6 +46,7 @@ class Settings:
     elevenlabs_voice_id: str
     default_language: Language
     stt_language: str  # "" = default_language
+    stt_language_hint: tuple[str, ...]  # empty: no hint
     log_level: str
     database_path: Path
 
@@ -83,6 +87,11 @@ class Settings:
         stt_language = get("STT_LANGUAGE").lower()
         if stt_language and stt_language not in STT_LANGUAGES:
             problems.append(f"STT_LANGUAGE must be empty or one of {', '.join(STT_LANGUAGES)}")
+        hint = tuple(h.strip().lower() for h in get("STT_LANGUAGE_HINT").split(",") if h.strip())
+        if hint and stt_language != "multi":
+            problems.append("STT_LANGUAGE_HINT needs STT_LANGUAGE=multi")
+        elif any(h not in STT_HINT_LANGUAGES for h in hint):
+            problems.append(f"STT_LANGUAGE_HINT may only list {', '.join(STT_HINT_LANGUAGES)}")
         log_level = choice("LOG_LEVEL", "INFO", LOG_LEVELS)
         database_path = Path(get("DATABASE_PATH", "./data/praxis.db"))
 
@@ -100,6 +109,7 @@ class Settings:
             elevenlabs_voice_id=elevenlabs_voice_id,
             default_language="en" if default_language == "en" else "de",
             stt_language=stt_language,
+            stt_language_hint=hint,
             log_level=log_level,
             database_path=database_path,
         )

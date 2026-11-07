@@ -47,6 +47,36 @@ def test_stt_multi_is_opt_in() -> None:
     assert main.stt_options(settings(STT_LANGUAGE="de", DEFAULT_LANGUAGE="en"))["language"] == "de"
 
 
+def test_stt_language_hint_is_sent_with_multi() -> None:
+    # Voice test 2026-11-07, call 1: multi tagged most of the user's accented German finals
+    # "te" (Telugu) and one "no"; the callback number was lost. The hint biases multi to
+    # de/en; opt-in until a voice test shows it helps.
+    opts = main.stt_options(settings(STT_LANGUAGE="multi", STT_LANGUAGE_HINT="de, EN"))
+    assert opts["language"] == "multi"
+    assert opts["language_hint"] == ["de", "en"]
+
+
+def test_stt_language_hint_needs_multi() -> None:
+    # Deepgram applies a hint only in multi mode; anything else would silently ignore it.
+    import pytest
+
+    from praxis_telefon.config import ConfigError
+
+    with pytest.raises(ConfigError, match="STT_LANGUAGE_HINT"):
+        settings(STT_LANGUAGE_HINT="de,en")
+    with pytest.raises(ConfigError, match="STT_LANGUAGE_HINT"):
+        settings(STT_LANGUAGE="de", STT_LANGUAGE_HINT="de,en")
+
+
+def test_stt_language_hint_rejects_unknown_languages() -> None:
+    import pytest
+
+    from praxis_telefon.config import ConfigError
+
+    with pytest.raises(ConfigError, match="STT_LANGUAGE_HINT"):
+        settings(STT_LANGUAGE="multi", STT_LANGUAGE_HINT="de,te")
+
+
 def test_stt_language_rejects_unknown_values() -> None:
     import pytest
 

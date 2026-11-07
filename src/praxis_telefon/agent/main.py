@@ -79,9 +79,16 @@ def stt_options(settings: Settings) -> dict[str, Any]:
     """Deepgram options. The call's language unless STT_LANGUAGE says otherwise.
 
     `multi` beat `de` on synthetic German (docs/experiments/stt-language.md) but in M1
-    heard real non-native German as English, so it stays opt-in until a voice test.
+    heard real non-native German as English and on 2026-11-07 tagged it Telugu, so it
+    stays opt-in; STT_LANGUAGE_HINT (multi only) biases it toward de/en.
     """
-    return {"model": DEEPGRAM_MODEL, "language": settings.stt_language or settings.default_language}
+    opts: dict[str, Any] = {
+        "model": DEEPGRAM_MODEL,
+        "language": settings.stt_language or settings.default_language,
+    }
+    if settings.stt_language_hint:
+        opts["language_hint"] = list(settings.stt_language_hint)
+    return opts
 
 
 def openrouter_provider() -> OpenRouterProviderPreferences:
