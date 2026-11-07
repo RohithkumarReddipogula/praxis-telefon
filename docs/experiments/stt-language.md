@@ -193,3 +193,24 @@ the stream on a final lost no audio (the start of the following phone number int
 10/10; one digit error also seen without a switch, one inserted digit). Switching
 mid-sentence lost the words sent before it (2 of 10), so the agent switches only right
 after a final.
+
+## Voice test with option B (2026-11-07, default `de`)
+
+Three calls by the user, real voice, console; `STT_LANGUAGE` and `STT_LANGUAGE_HINT` empty.
+**All three passed.**
+
+| call | what happened |
+|---|---|
+| A, German, then English | switched to `en` at 16:39:11, booked in English, switched back to `de` at 16:40:26 |
+| B, English from the first line | the first line got the bilingual "say that again"; "English" switched at 16:41:27; booked |
+| C, German | message saved |
+
+One warning in call A at 16:40:14 (after the switch to `en`, before the switch back):
+LiveKit's "transcript arrives after turn has been committed, consider raising
+min_delay". No visible effect in the call; noted for the endpointing / barge-in work in
+Part C rather than changed here (a higher `min_delay` costs latency on every turn).
+
+**Decision: option B adopted.** `de` stays the default, the stream switches on language
+requests; English switching (M3 Part B) is done. Open: an English line in the greeting
+would save English callers one turn (about 1.5 s per call); names are still misheard
+about 1 in 3 in every setting.

@@ -87,8 +87,8 @@ Done and pushed:
   narration such as "Das ist ein Terminwunsch …"), repeated or unneeded new-or-existing
   questions, and weekdays or months the LLM worked out (today's date backs only its
   weekday); at most one retry per reply, then a fixed sentence. A read-back may have one
-  sentence between the claim and its question. False-positive check: corpus of 248
-  passing live tests.
+  sentence between the claim and its question. False-positive check: the corpus of
+  passing live tests (`tests/data/live_sentences.jsonl`).
 - Live harness records timings, token counts and config per test (`LIVE_CORPUS`);
   `uv run python -m eval.leak_report eval/results/*.jsonl` compares runs.
 - **Part B, call language** (step 2b): code decides it from the STT finals
@@ -98,9 +98,21 @@ Done and pushed:
   "Sprechen Sie Deutsch?" switch at once. The LLM gets a note with the call's language;
   the language check blocks the wrong language both ways; English reasoning patterns
   (request classification, internal ids). Each final is logged with labels only.
-- Last live run (2026-11-07): 78/78 suite plus 21/21 English language tests passed
-  (`tests/live/test_language_live.py`; the scripted caller keeps its language); no German
-  sentence in English calls, $0.06.
+- **Part B, English switching** (`docs/experiments/stt-language.md`): STT A/B on synthetic
+  audio (`eval/stt_ab/`) passed `multi` (+8.8 points), but with the user's accented German
+  `multi` tagged Telugu/Afrikaans/Norwegian and lost digits, also with `language_hint`:
+  **`multi` rejected** (kept as opt-in `STT_LANGUAGE` / `STT_LANGUAGE_HINT` experiments).
+  **Option B adopted:** Deepgram `de` by default (`test_stt_uses_german_by_default`); the
+  stream switches to `en` on "English" / "Englisch" alone (the bilingual "say that again"
+  asks for it) or "Können wir Englisch sprechen?", back to `de` on "Deutsch" / "Deutsche"
+  on the `en` stream, "German" alone or in a request, or an empty `en` final in a call
+  that started German (no strike, bilingual "please repeat"). Built from the user's
+  own-voice recordings (`eval/my_voice.py`, audio gitignored); no audio lost switching
+  after a final (`eval/stt_ab/switch_check.py`). `take_message` merges a second reason
+  for the same caller into one note. **Voice test 2026-11-07 passed** (3 calls: switch
+  to `en` and back, English caller via "English", German message).
+- Last live run (2026-11-07): 99/99 (78 suite + 21 language tests), $0.06; no German
+  sentence in English calls. False-positive corpus: 347 passing live tests.
 
 Open:
 - **First speech p90 for direct answers:** turns without a tool get no filler, and with
@@ -108,29 +120,6 @@ Open:
   timer-based filler or a shorter thinking time; not built.
 - **Real end-to-end check:** a console session by the user; read `e2e_s`, `is_filler` and
   `since_caller_s` from the turn log.
-- **Part B, English switching:** STT A/B done (`docs/experiments/stt-language.md`,
-  `eval/stt_ab/`): `multi` +8.8 points on synthetic German, passes the 2-point rule;
-  `de` hears nothing in 110 of 160 English clips. `multi` is opt-in (`STT_LANGUAGE=multi`);
-  `de` stays the default (`test_stt_uses_german_by_default`, M1: `multi` heard the user's
-  non-native German as English).
-  Voice test 2026-11-07 with `multi`, two calls: English call all finals tagged `en`,
-  `find_slots` and `book` fine. German call: message saved, number right, but 2 German
-  finals tagged `en`; after the first the LLM answered in English and the filter blocked
-  3 sentences (`meta:language`). One wrong tag must not switch the call: fixed by the
-  call-language rule (done, above). Next: the user's second voice test with `multi`,
-  then `multi` as the default.
-- **Gap with `STT_LANGUAGE=de`:** Deepgram `de` cannot hear English (110 of 160 English A/B
-  clips empty; the user's own "Can we speak English?" empty too), so English callers ended
-  in the two-strike handover. `multi` as the default is **rejected**: with the user's
-  accented German it tagged Telugu/Afrikaans/Norwegian and lost digits, also with
-  `language_hint` (docs/experiments/stt-language.md). **Fix: option B** (built, not yet
-  committed): `de` by default; the stream is switched to `en` on "English" / "Englisch"
-  alone (the bilingual "say that again" message asks for it) or "Können wir Englisch
-  sprechen?", and back to `de` on "Deutsch" / "Deutsche" (as `en` writes them) or
-  "German" alone or in a request; an empty final on `en` in a call that started German
-  switches back (no strike, bilingual "please repeat"). Based on the user's own-voice
-  recordings (`eval/my_voice.py`, gitignored audio). No audio lost when switching after
-  a final (`eval/stt_ab/switch_check.py`). Needs the user's voice test.
 - **English line in the greeting (open option):** with option B an English caller's first
   line comes back empty from `de`; the bilingual "say that again" message tells them to
   say "English", so English takes two turns (accepted for now, user 2026-11-07). An English
@@ -140,5 +129,9 @@ Open:
   4–15 % right. Booking and lookup by name need a fallback (spelling, confirm by date
   of birth); not built.
 - **Part C not started:** FAQ with local retrieval, barge-in tuning.
+  - **Late transcript (for barge-in / endpointing tuning):** voice test 2026-11-07, call A
+    at 16:40:14, LiveKit warned "transcript arrives after turn has been committed,
+    consider raising min_delay" (`main.ENDPOINTING`); once in three calls, no visible
+    effect. Check how often it happens before raising `min_delay` (costs latency).
 - Afterwards: README and CLAUDE.md update for all of M3; the user's local
   `data/praxis.db` must be reseeded for 28 days (`... db.seed --reset`, the user runs it).
