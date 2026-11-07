@@ -470,3 +470,22 @@ def test_english_sentences_like_reasoning_are_kept(sentence: str) -> None:
     from praxis_telefon.agent.speech_filters import meta_reasons
 
     assert meta_reasons(sentence, "en") == []
+
+
+def test_move_read_back_with_new_and_existing_is_not_the_intent_question() -> None:
+    # Bug, M3 final live run 2026-11-07 (book_move_cancel_in_one_call[2]): this move
+    # read-back was blocked as the "neuer oder bestehender Termin?" question.
+    from praxis_telefon.agent.speech_filters import is_new_or_existing_question
+
+    read_back = (
+        "Soll ich Ihren bestehenden Termin am Dienstag, 10. November, um 8 Uhr auf diesen "
+        "neuen Termin für Max Mustermann, geboren am ersten Februar "
+        "neunzehnhundertneunundsiebzig, verschieben?"
+    )
+    assert not is_new_or_existing_question(read_back)
+    for question in (
+        "Möchten Sie einen neuen Termin, oder geht es um einen bestehenden?",
+        "Geht es um einen neuen oder einen bestehenden Termin?",
+        "Is this about a new appointment or an existing one?",
+    ):
+        assert is_new_or_existing_question(question), question

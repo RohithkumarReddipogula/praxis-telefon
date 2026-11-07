@@ -282,9 +282,13 @@ def practice_facts(sentence: str) -> set[str]:
 # --- new or existing appointment ---------------------------------------------------------
 
 # "einen neuen Termin, oder geht es um einen bestehenden", "neuen oder bestehenden Termin"
+# The question offers a choice ("oder" / "or" between the two). A move read-back names
+# both without one: "Soll ich Ihren bestehenden Termin ... auf diesen neuen Termin ...
+# verschieben?" (M3 final live run 2026-11-07).
 _NEW_OR_EXISTING = re.compile(
-    r"\bneue[nmrs]?\b.{0,60}\bbestehende[nmrs]?\b|\bbestehende[nmrs]?\b.{0,60}\bneue[nmrs]?\b|"
-    r"\bnew\b.{0,60}\bexisting\b|\bexisting\b.{0,60}\bnew\b",
+    r"\bneue[nmrs]?\b.{0,60}\boder\b.{0,60}\bbestehende[nmrs]?\b|"
+    r"\bbestehende[nmrs]?\b.{0,60}\boder\b.{0,60}\bneue[nmrs]?\b|"
+    r"\bnew\b.{0,60}\bor\b.{0,60}\bexisting\b|\bexisting\b.{0,60}\bor\b.{0,60}\bnew\b",
     _I,
 )
 # "geboren am fünfzehnten Juni neunzehnhundertfünfundachtzig" is not a wanted day.
