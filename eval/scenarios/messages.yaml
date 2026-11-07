@@ -1,0 +1,71 @@
+# Messages for the practice team (3).
+- id: callback_spoken_digits
+  group: messages
+  lang: de
+  tags: [message]
+  audio: true
+  caller:
+    lines: ["Guten Tag, {max}. Kann mich Dr. Weber wegen meiner Laborwerte zurückrufen? Meine Nummer ist {phone_de}."]
+    until: take_message
+  expect:
+    message: {count: 1, number: "03023125456", read_back: true}
+    tools_required: [take_message]
+    no_booking: true
+    language: de
+
+- id: prescription_then_second_reason
+  group: messages
+  lang: de
+  tags: [message, prescription]
+  caller:
+    lines:
+      - "Guten Tag, {max}. Ich brauche ein Folgerezept für meine Blutdrucktabletten. Meine Rückrufnummer ist {phone_de}."
+      - "Und bitte vermerken Sie auch, dass ich einen Rückruf wegen einer Überweisung möchte."
+    until: take_message
+  expect:
+    message: {count: 1, number: "03023125456", reasons: [prescription]}
+    no_booking: true
+    language: de
+
+- id: referral_request
+  group: messages
+  lang: de
+  tags: [message, referral]
+  caller:
+    lines: ["Hallo, {max}. Ich brauche eine Überweisung zum Orthopäden. Erreichbar bin ich unter {phone_de}."]
+    until: take_message
+  expect:
+    message: {count: 1, number: "03023125456", reasons: [referral]}
+    no_booking: true
+    language: de
+
+# Callback numbers (M4 rerun 2026-11-07: the LLM saved 03212345456 for "null drei null,
+# zwei drei eins zwei fünf, vier fünf sechs" and read back the caller's words).
+- id: callback_number_in_a_long_line
+  group: messages
+  lang: de
+  tags: [message, callback_number]
+  audio: true
+  caller:
+    lines:
+      - "Guten Tag, {max}. Ich brauche ein Folgerezept für meine Schilddrüsentabletten, bitte rufen Sie mich zurück, meine Nummer ist {phone_de}, am besten nach sechzehn Uhr."
+    until: take_message
+  expect:
+    message: {count: 1, number: "03023125456", reasons: [prescription], read_back: true}
+    no_booking: true
+    language: de
+
+- id: callback_number_en
+  group: messages
+  lang: en
+  tags: [message, callback_number, english]
+  setup: {identity: max_en}
+  caller:
+    lines:
+      - "Hello, this is {max_en}. Could Dr. Weber call me back about my test results? My number is {phone_en}."
+    language: en
+    until: take_message
+  expect:
+    message: {count: 1, number: "03023125456", read_back: true}
+    no_booking: true
+    language: en

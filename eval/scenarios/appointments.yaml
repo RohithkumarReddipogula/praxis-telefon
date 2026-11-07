@@ -1,0 +1,118 @@
+# Appointments (8). Clock Monday 9 November 2026, 07:00 Berlin unless stated.
+# Erika's seeded booking (erika_booked): Tuesday 10 November, 9:00, Dr. Weber.
+- id: book_next_tuesday_morning
+  group: appointments
+  lang: de
+  tags: [book, dates]
+  audio: true
+  caller:
+    lines: ["Guten Tag, hier ist {max}. Ich hätte gern nächsten Dienstag vormittags einen Termin."]
+    until: book
+  expect:
+    booking: {day: "2026-11-10", part_of_day: morning}
+    tools_required: [find_slots, book]
+    tools_forbidden: [take_message]
+    language: de
+
+- id: book_end_of_week
+  group: appointments
+  lang: de
+  tags: [book, dates]
+  caller:
+    lines: ["Hallo, {max}. Ich bräuchte einen Termin Ende der Woche."]
+    until: book
+  expect:
+    tools_required: [find_slots, book]
+    tools_forbidden: [take_message]
+    language: de
+    must_say: ["Donnerstag|Freitag"]
+
+- id: book_saturday_closed
+  group: appointments
+  lang: de
+  tags: [book, dates, closed_day]
+  setup: {clock: friday_10}
+  caller:
+    lines: ["Guten Tag, {max}. Haben Sie morgen einen Termin?"]
+    until: book
+  expect:
+    booking: {day: "2026-11-16"}
+    tools_required: [find_slots, book]
+    must_say: ["geschlossen"]
+    language: de
+
+- id: move_to_wednesday
+  group: appointments
+  lang: de
+  tags: [move]
+  audio: true
+  setup: {erika_booked: true, identity: erika}
+  caller:
+    lines: ["Guten Tag, hier ist {erika}. Ich muss meinen Termin am Dienstag auf Mittwoch vormittags verschieben."]
+    until: move_booking
+  expect:
+    moved: {day: "2026-11-11", part_of_day: morning}
+    tools_required: [find_booking, move_booking]
+    tools_forbidden: [cancel_booking, take_message]
+    no_booking: true
+    language: de
+
+- id: cancel_tuesday
+  group: appointments
+  lang: de
+  tags: [cancel]
+  setup: {erika_booked: true, identity: erika}
+  caller:
+    lines: ["Hallo, {erika}. Ich möchte meinen Termin am Dienstag absagen."]
+    until: cancel_booking
+  expect:
+    cancelled: true
+    tools_required: [find_booking, cancel_booking]
+    tools_forbidden: [move_booking, take_message]
+    language: de
+
+- id: book_move_cancel_one_call
+  group: appointments
+  lang: de
+  tags: [book, move, cancel]
+  caller:
+    lines:
+      - "Guten Tag, {max}. Ich hätte gern nächsten Dienstag vormittags einen Termin. Der erste freie Termin passt mir, bitte gleich buchen."
+      - "Ja, das stimmt so."
+      - "Ach, Dienstag passt doch nicht. Können Sie den Termin auf Mittwoch vormittags verschieben? Der erste Termin passt mir."
+      - "Ja, das stimmt so."
+      - "Ich muss den Termin leider doch ganz absagen."
+    until: cancel_booking
+    max_replies: 4
+  expect:
+    tools_required: [find_slots, book, move_booking, cancel_booking]
+    tools_forbidden: [take_message]
+    language: de
+
+- id: own_appointment_question
+  group: appointments
+  lang: de
+  tags: [find_booking]
+  setup: {erika_booked: true, identity: erika}
+  caller:
+    lines: ["Guten Tag, hier ist {erika}. Habe ich am Dienstag einen Termin?"]
+    until: find_booking
+  expect:
+    tools_required: [find_booking]
+    tools_forbidden: [find_slots, book]
+    must_say: ["Dienstag"]
+    language: de
+
+- id: no_slot_fits_message
+  group: appointments
+  lang: de
+  tags: [book, message]
+  caller:
+    lines:
+      - "Guten Tag, {max}. Ich brauche einen Termin am Sonntag um 22 Uhr, das ist der einzige Zeitpunkt, an dem ich kann."
+      - "Nein, ein anderer Tag geht wirklich nicht. Können Sie das Praxisteam bitten, mich zurückzurufen? Meine Nummer ist {phone_de}."
+    until: take_message
+  expect:
+    message: {count: 1, number: "03023125456"}
+    no_booking: true
+    language: de

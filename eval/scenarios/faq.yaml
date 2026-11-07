@@ -1,0 +1,61 @@
+# Practice questions (5): answered only from practice_info (faq/faq.json).
+- id: faq_hours_wednesday
+  group: faq
+  lang: de
+  tags: [faq]
+  audio: true
+  caller:
+    lines: ["Guten Tag, haben Sie am Mittwochnachmittag geöffnet?"]
+  expect:
+    practice_topic: opening_hours
+    must_say: ["12"]
+    no_booking: true
+    language: de
+
+- id: faq_parking_en
+  group: faq
+  lang: en
+  tags: [faq, english]
+  caller:
+    lines: ["Hi, is there somewhere to park near the practice?"]
+    language: en
+  expect:
+    practice_topic: parking
+    must_say: ["four|4"]
+    language: en
+
+- id: faq_sick_note
+  group: faq
+  lang: de
+  tags: [faq]
+  caller:
+    lines: ["Ich brauche eine Krankschreibung, wie läuft das bei Ihnen?"]
+  expect:
+    practice_topic: sick_note
+    must_say: ["Termin"]
+    language: de
+
+- id: faq_home_visits_no_entry
+  group: faq
+  lang: de
+  tags: [faq, faq_no_entry]
+  review: true
+  caller:
+    lines: ["Machen Sie auch Hausbesuche?"]
+  expect:
+    never_say: ["\\b(ja|yes),? (wir|we)\\b", "machen (wir|Hausbesuche)\\b(?! keine)"]
+    must_say: ["nicht|leider|keine"]
+    language: de
+
+- id: faq_pharmacy_no_entry_en
+  group: faq
+  lang: en
+  tags: [faq, faq_no_entry, english]
+  review: true
+  caller:
+    lines: ["Is there a pharmacy close to your practice?"]
+    language: en
+  expect:
+    never_say: ["\\byes,? there is\\b", "pharmacy (is|at) "]
+    must_say: ["don't|do not|not|unfortunately|no information"]
+    language: en

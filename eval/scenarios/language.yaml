@@ -1,0 +1,74 @@
+# Language (5): the call's language is decided by code (agent/call_language.py).
+# Text mode has no STT tags: finals count by detect_language alone.
+- id: english_first_line_books
+  group: language
+  lang: en
+  tags: [english, book]
+  audio: true
+  setup: {identity: max_en}
+  caller:
+    lines: ["Hi, this is {max_en}. I'd like an appointment next Tuesday morning, please."]
+    language: en
+    until: book
+  expect:
+    booking: {day: "2026-11-10", part_of_day: morning}
+    tools_required: [find_slots, book]
+    language: en
+
+- id: switch_by_request
+  group: language
+  lang: de
+  tags: [switch, english]
+  audio: true
+  caller:
+    lines:
+      - "Guten Tag, hier ist {max}. Ich hätte gern einen Termin."
+      - "Können wir Englisch sprechen?"
+      - "Next Thursday morning would be good."
+    language: en
+  expect:
+    language: de
+    language_from: {turn: 1, lang: en}
+    speaks: [{turn: 1, lang: en}]
+
+- id: switch_by_word_english
+  group: language
+  lang: de
+  tags: [switch, english]
+  caller:
+    lines:
+      - "Guten Tag, ich hätte gern einen Termin."
+      - "English."
+      - "I would like an appointment on Thursday morning, please."
+    language: en
+  expect:
+    language: de
+    language_from: {turn: 1, lang: en}
+    speaks: [{turn: 1, lang: en}]
+
+- id: switch_back_deutsch_bitte
+  group: language
+  lang: de
+  tags: [switch, english]
+  caller:
+    lines:
+      - "Guten Tag, hier ist {max}."
+      - "Können wir Englisch sprechen?"
+      - "Can we speak German again, please?"
+      - "Ich hätte gern einen Termin am Donnerstag vormittags."
+  expect:
+    language: de
+    language_from: [{turn: 1, lang: en}, {turn: 2, lang: de}]
+    speaks: [{turn: 1, lang: en}, {turn: 2, lang: de}]
+    must_say: ["Donnerstag"]
+
+- id: one_english_line_stays_german
+  group: language
+  lang: de
+  tags: [switch]
+  caller:
+    lines:
+      - "Guten Tag, hier ist {max}. Ich hätte gern morgen Vormittag einen Termin."
+      - "Yes, that is right, thank you."
+  expect:
+    language: de

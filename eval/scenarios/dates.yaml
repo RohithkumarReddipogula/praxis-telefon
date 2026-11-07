@@ -1,0 +1,51 @@
+# Relative dates (4): find_slots gets the caller's words; code resolves them.
+- id: date_uebermorgen
+  group: dates
+  lang: de
+  tags: [dates, book]
+  caller:
+    lines: ["Guten Tag, {max}. Geht es übermorgen?"]
+    until: book
+  expect:
+    booking: {day: "2026-11-11"}
+    tools_required: [find_slots, book]
+    language: de
+
+- id: date_in_two_weeks
+  group: dates
+  lang: de
+  tags: [dates]
+  caller:
+    lines: ["Guten Tag, {max}. Ich hätte gern einen Termin in zwei Wochen."]
+    until: find_slots
+  expect:
+    tools_required: [find_slots]
+    must_say: ["23\\.|24\\.|25\\.|26\\.|27\\.|dreiundzwanzig|November"]
+    language: de
+
+- id: date_explicit_12_november
+  group: dates
+  lang: de
+  tags: [dates, book]
+  caller:
+    lines: ["Hallo, {max}. Haben Sie am zwölften November einen Termin?"]
+    until: book
+  expect:
+    booking: {day: "2026-11-12"}
+    tools_required: [find_slots, book]
+    tools_forbidden: [find_booking]
+    language: de
+
+- id: date_tomorrow_afternoon_en
+  group: dates
+  lang: en
+  tags: [dates, english, book]
+  setup: {identity: max_en}
+  caller:
+    lines: ["Hi, this is {max_en}. Could I get an appointment tomorrow afternoon?"]
+    language: en
+    until: book
+  expect:
+    booking: {day: "2026-11-10", part_of_day: afternoon}
+    tools_required: [find_slots, book]
+    language: en
