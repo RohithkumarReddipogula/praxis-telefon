@@ -1,0 +1,2009 @@
+{
+ "seed": 20261107,
+ "voices": {
+  "sarah": "EXAVITQu4vr4xnSDxMaL",
+  "george": "JBFqnCBsd6RMkjVDRZzb"
+ },
+ "utterances": [
+  {
+   "id": "de-name-00",
+   "group": "de",
+   "kind": "name",
+   "expected": "Jürgen Weißmüller",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Mein Name ist Jürgen Weißmüller."
+    }
+   ]
+  },
+  {
+   "id": "de-name-01",
+   "group": "de",
+   "kind": "name",
+   "expected": "Hildegard Schößler",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Hier spricht Hildegard Schößler."
+    }
+   ]
+  },
+  {
+   "id": "de-name-02",
+   "group": "de",
+   "kind": "name",
+   "expected": "Björn Nußbaum",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Ich heiße Björn Nußbaum."
+    }
+   ]
+  },
+  {
+   "id": "de-name-03",
+   "group": "de",
+   "kind": "name",
+   "expected": "Käthe Fröhlich",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Der Termin wäre für Käthe Fröhlich."
+    }
+   ]
+  },
+  {
+   "id": "de-name-04",
+   "group": "de",
+   "kind": "name",
+   "expected": "Günther Häusler",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Mein Name ist Günther Häusler."
+    }
+   ]
+  },
+  {
+   "id": "de-name-05",
+   "group": "de",
+   "kind": "name",
+   "expected": "Mareike Brückner",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Hier spricht Mareike Brückner."
+    }
+   ]
+  },
+  {
+   "id": "de-name-06",
+   "group": "de",
+   "kind": "name",
+   "expected": "Sören Öztürk",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Ich heiße Sören Öztürk."
+    }
+   ]
+  },
+  {
+   "id": "de-name-07",
+   "group": "de",
+   "kind": "name",
+   "expected": "Dörte Jäckel",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Der Termin wäre für Dörte Jäckel."
+    }
+   ]
+  },
+  {
+   "id": "de-name-08",
+   "group": "de",
+   "kind": "name",
+   "expected": "Lutz Vogelsang",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Mein Name ist Lutz Vogelsang."
+    }
+   ]
+  },
+  {
+   "id": "de-name-09",
+   "group": "de",
+   "kind": "name",
+   "expected": "Annegret Möller",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Hier spricht Annegret Möller."
+    }
+   ]
+  },
+  {
+   "id": "de-name-10",
+   "group": "de",
+   "kind": "name",
+   "expected": "Torben Kühnel",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Ich heiße Torben Kühnel."
+    }
+   ]
+  },
+  {
+   "id": "de-name-11",
+   "group": "de",
+   "kind": "name",
+   "expected": "Wiebke Mühlbauer",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Der Termin wäre für Wiebke Mühlbauer."
+    }
+   ]
+  },
+  {
+   "id": "de-name-12",
+   "group": "de",
+   "kind": "name",
+   "expected": "Malte Ehrenträger",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Mein Name ist Malte Ehrenträger."
+    }
+   ]
+  },
+  {
+   "id": "de-name-13",
+   "group": "de",
+   "kind": "name",
+   "expected": "Henrike Lindqvist",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Hier spricht Henrike Lindqvist."
+    }
+   ]
+  },
+  {
+   "id": "de-name-14",
+   "group": "de",
+   "kind": "name",
+   "expected": "Jörg Wendler",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Ich heiße Jörg Wendler."
+    }
+   ]
+  },
+  {
+   "id": "de-name-15",
+   "group": "de",
+   "kind": "name",
+   "expected": "Gesine Pfeiffer",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Der Termin wäre für Gesine Pfeiffer."
+    }
+   ]
+  },
+  {
+   "id": "de-name-16",
+   "group": "de",
+   "kind": "name",
+   "expected": "Rüdiger Wüstenhagen",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Mein Name ist Rüdiger Wüstenhagen."
+    }
+   ]
+  },
+  {
+   "id": "de-name-17",
+   "group": "de",
+   "kind": "name",
+   "expected": "Swantje Stöckl",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Hier spricht Swantje Stöckl."
+    }
+   ]
+  },
+  {
+   "id": "de-name-18",
+   "group": "de",
+   "kind": "name",
+   "expected": "Hauke Göbel",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Ich heiße Hauke Göbel."
+    }
+   ]
+  },
+  {
+   "id": "de-name-19",
+   "group": "de",
+   "kind": "name",
+   "expected": "Ingeborg Quellenberg",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Der Termin wäre für Ingeborg Quellenberg."
+    }
+   ]
+  },
+  {
+   "id": "de-name-20",
+   "group": "de",
+   "kind": "name",
+   "expected": "Volker Dreyer",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Mein Name ist Volker Dreyer."
+    }
+   ]
+  },
+  {
+   "id": "de-name-21",
+   "group": "de",
+   "kind": "name",
+   "expected": "Margit Haßelbach",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Hier spricht Margit Haßelbach."
+    }
+   ]
+  },
+  {
+   "id": "de-name-22",
+   "group": "de",
+   "kind": "name",
+   "expected": "Detlef Grünewald",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Ich heiße Detlef Grünewald."
+    }
+   ]
+  },
+  {
+   "id": "de-name-23",
+   "group": "de",
+   "kind": "name",
+   "expected": "Heike Brandstätter",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Der Termin wäre für Heike Brandstätter."
+    }
+   ]
+  },
+  {
+   "id": "de-name-24",
+   "group": "de",
+   "kind": "name",
+   "expected": "Ömer Hoffstätter",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Mein Name ist Ömer Hoffstätter."
+    }
+   ]
+  },
+  {
+   "id": "de-name-25",
+   "group": "de",
+   "kind": "name",
+   "expected": "Elif Kowalczyk",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Hier spricht Elif Kowalczyk."
+    }
+   ]
+  },
+  {
+   "id": "de-name-26",
+   "group": "de",
+   "kind": "name",
+   "expected": "Dragan Rößner",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Ich heiße Dragan Rößner."
+    }
+   ]
+  },
+  {
+   "id": "de-name-27",
+   "group": "de",
+   "kind": "name",
+   "expected": "Katarzyna Schütte",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Der Termin wäre für Katarzyna Schütte."
+    }
+   ]
+  },
+  {
+   "id": "de-name-28",
+   "group": "de",
+   "kind": "name",
+   "expected": "Mehmet Süßmann",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Mein Name ist Mehmet Süßmann."
+    }
+   ]
+  },
+  {
+   "id": "de-name-29",
+   "group": "de",
+   "kind": "name",
+   "expected": "Lena Großkopf",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Hier spricht Lena Großkopf."
+    }
+   ]
+  },
+  {
+   "id": "de-name-30",
+   "group": "de",
+   "kind": "name",
+   "expected": "Till Tiedemann",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Ich heiße Till Tiedemann."
+    }
+   ]
+  },
+  {
+   "id": "de-name-31",
+   "group": "de",
+   "kind": "name",
+   "expected": "Frauke Bäumler",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Der Termin wäre für Frauke Bäumler."
+    }
+   ]
+  },
+  {
+   "id": "de-name-32",
+   "group": "de",
+   "kind": "name",
+   "expected": "Uwe Krämer",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Mein Name ist Uwe Krämer."
+    }
+   ]
+  },
+  {
+   "id": "de-dob-00",
+   "group": "de",
+   "kind": "dob",
+   "expected": "1986-08-26",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Ich bin am sechsundzwanzigsten August neunzehnhundertsechsundachtzig geboren."
+    }
+   ]
+  },
+  {
+   "id": "de-dob-01",
+   "group": "de",
+   "kind": "dob",
+   "expected": "1942-03-24",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Mein Geburtsdatum ist der vierundzwanzigste dritte neunzehnhundertzweiundvierzig."
+    }
+   ]
+  },
+  {
+   "id": "de-dob-02",
+   "group": "de",
+   "kind": "dob",
+   "expected": "1977-04-07",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Geboren am siebten April siebenundsiebzig."
+    }
+   ]
+  },
+  {
+   "id": "de-dob-03",
+   "group": "de",
+   "kind": "dob",
+   "expected": "1947-09-10",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Ich bin am zehnten September neunzehnhundertsiebenundvierzig geboren."
+    }
+   ]
+  },
+  {
+   "id": "de-dob-04",
+   "group": "de",
+   "kind": "dob",
+   "expected": "1946-03-07",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Mein Geburtsdatum ist der siebte dritte neunzehnhundertsechsundvierzig."
+    }
+   ]
+  },
+  {
+   "id": "de-dob-05",
+   "group": "de",
+   "kind": "dob",
+   "expected": "1989-02-10",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Geboren am zehnten Februar neunundachtzig."
+    }
+   ]
+  },
+  {
+   "id": "de-dob-06",
+   "group": "de",
+   "kind": "dob",
+   "expected": "1961-06-06",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Ich bin am sechsten Juni neunzehnhunderteinundsechzig geboren."
+    }
+   ]
+  },
+  {
+   "id": "de-dob-07",
+   "group": "de",
+   "kind": "dob",
+   "expected": "1968-05-22",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Mein Geburtsdatum ist der zweiundzwanzigste fünfte neunzehnhundertachtundsechzig."
+    }
+   ]
+  },
+  {
+   "id": "de-dob-08",
+   "group": "de",
+   "kind": "dob",
+   "expected": "1960-07-27",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Geboren am siebenundzwanzigsten Juli sechzig."
+    }
+   ]
+  },
+  {
+   "id": "de-dob-09",
+   "group": "de",
+   "kind": "dob",
+   "expected": "1941-02-27",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Ich bin am siebenundzwanzigsten Februar neunzehnhunderteinundvierzig geboren."
+    }
+   ]
+  },
+  {
+   "id": "de-dob-10",
+   "group": "de",
+   "kind": "dob",
+   "expected": "2003-11-17",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Mein Geburtsdatum ist der siebzehnte elfte zweitausenddrei."
+    }
+   ]
+  },
+  {
+   "id": "de-dob-11",
+   "group": "de",
+   "kind": "dob",
+   "expected": "1967-04-27",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Geboren am siebenundzwanzigsten April siebenundsechzig."
+    }
+   ]
+  },
+  {
+   "id": "de-dob-12",
+   "group": "de",
+   "kind": "dob",
+   "expected": "1945-10-14",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Ich bin am vierzehnten Oktober neunzehnhundertfünfundvierzig geboren."
+    }
+   ]
+  },
+  {
+   "id": "de-dob-13",
+   "group": "de",
+   "kind": "dob",
+   "expected": "2004-01-15",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Mein Geburtsdatum ist der fünfzehnte erste zweitausendvier."
+    }
+   ]
+  },
+  {
+   "id": "de-dob-14",
+   "group": "de",
+   "kind": "dob",
+   "expected": "2004-03-20",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Geboren am zwanzigsten März zweitausendvier."
+    }
+   ]
+  },
+  {
+   "id": "de-dob-15",
+   "group": "de",
+   "kind": "dob",
+   "expected": "1955-03-17",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Ich bin am siebzehnten März neunzehnhundertfünfundfünfzig geboren."
+    }
+   ]
+  },
+  {
+   "id": "de-dob-16",
+   "group": "de",
+   "kind": "dob",
+   "expected": "1947-08-21",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Mein Geburtsdatum ist der einundzwanzigste achte neunzehnhundertsiebenundvierzig."
+    }
+   ]
+  },
+  {
+   "id": "de-dob-17",
+   "group": "de",
+   "kind": "dob",
+   "expected": "1990-12-20",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Geboren am zwanzigsten Dezember neunzig."
+    }
+   ]
+  },
+  {
+   "id": "de-dob-18",
+   "group": "de",
+   "kind": "dob",
+   "expected": "2005-02-27",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Ich bin am siebenundzwanzigsten Februar zweitausendfünf geboren."
+    }
+   ]
+  },
+  {
+   "id": "de-dob-19",
+   "group": "de",
+   "kind": "dob",
+   "expected": "1997-10-14",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Mein Geburtsdatum ist der vierzehnte zehnte neunzehnhundertsiebenundneunzig."
+    }
+   ]
+  },
+  {
+   "id": "de-dob-20",
+   "group": "de",
+   "kind": "dob",
+   "expected": "1964-03-03",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Geboren am dritten März vierundsechzig."
+    }
+   ]
+  },
+  {
+   "id": "de-dob-21",
+   "group": "de",
+   "kind": "dob",
+   "expected": "1999-04-04",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Ich bin am vierten April neunzehnhundertneunundneunzig geboren."
+    }
+   ]
+  },
+  {
+   "id": "de-dob-22",
+   "group": "de",
+   "kind": "dob",
+   "expected": "1939-05-12",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Mein Geburtsdatum ist der zwölfte fünfte neunzehnhundertneununddreißig."
+    }
+   ]
+  },
+  {
+   "id": "de-dob-23",
+   "group": "de",
+   "kind": "dob",
+   "expected": "1978-12-12",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Geboren am zwölften Dezember achtundsiebzig."
+    }
+   ]
+  },
+  {
+   "id": "de-dob-24",
+   "group": "de",
+   "kind": "dob",
+   "expected": "1997-12-01",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Ich bin am ersten Dezember neunzehnhundertsiebenundneunzig geboren."
+    }
+   ]
+  },
+  {
+   "id": "de-dob-25",
+   "group": "de",
+   "kind": "dob",
+   "expected": "1975-06-10",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Mein Geburtsdatum ist der zehnte sechste neunzehnhundertfünfundsiebzig."
+    }
+   ]
+  },
+  {
+   "id": "de-dob-26",
+   "group": "de",
+   "kind": "dob",
+   "expected": "1939-01-08",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Geboren am achten Januar neununddreißig."
+    }
+   ]
+  },
+  {
+   "id": "de-dob-27",
+   "group": "de",
+   "kind": "dob",
+   "expected": "1962-12-26",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Ich bin am sechsundzwanzigsten Dezember neunzehnhundertzweiundsechzig geboren."
+    }
+   ]
+  },
+  {
+   "id": "de-dob-28",
+   "group": "de",
+   "kind": "dob",
+   "expected": "1967-11-06",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Mein Geburtsdatum ist der sechste elfte neunzehnhundertsiebenundsechzig."
+    }
+   ]
+  },
+  {
+   "id": "de-dob-29",
+   "group": "de",
+   "kind": "dob",
+   "expected": "1995-07-23",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Geboren am dreiundzwanzigsten Juli fünfundneunzig."
+    }
+   ]
+  },
+  {
+   "id": "de-dob-30",
+   "group": "de",
+   "kind": "dob",
+   "expected": "1954-05-08",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Ich bin am achten Mai neunzehnhundertvierundfünfzig geboren."
+    }
+   ]
+  },
+  {
+   "id": "de-dob-31",
+   "group": "de",
+   "kind": "dob",
+   "expected": "1995-01-04",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Mein Geburtsdatum ist der vierte erste neunzehnhundertfünfundneunzig."
+    }
+   ]
+  },
+  {
+   "id": "de-dob-32",
+   "group": "de",
+   "kind": "dob",
+   "expected": "1939-10-10",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Geboren am zehnten Oktober neununddreißig."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-00",
+   "group": "de",
+   "kind": "phone",
+   "expected": "03023125642",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Meine Nummer ist null drei null, zwei drei eins zwei fünf, sechs vier zwei."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-01",
+   "group": "de",
+   "kind": "phone",
+   "expected": "04066969975",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Sie erreichen mich unter null vier null, sechs sechs neun sechs neun, neun sieben fünf."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-02",
+   "group": "de",
+   "kind": "phone",
+   "expected": "06990009343",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Rufen Sie mich bitte zurück unter null sechs neun, neunzig null null neun, vierunddreißig drei."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-03",
+   "group": "de",
+   "kind": "phone",
+   "expected": "08999998975",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Meine Nummer ist null acht neun, neun neun neun neun acht, neun sieben fünf."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-04",
+   "group": "de",
+   "kind": "phone",
+   "expected": "02214710834",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Sie erreichen mich unter null zwo zwo eins, vier sieben eins null, acht drei vier."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-05",
+   "group": "de",
+   "kind": "phone",
+   "expected": "03023125269",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Rufen Sie mich bitte zurück unter null drei null, dreiundzwanzig zwölf fünf, sechsundzwanzig neun."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-06",
+   "group": "de",
+   "kind": "phone",
+   "expected": "04066969825",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Meine Nummer ist null vier null, sechs sechs neun sechs neun, acht zwei fünf."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-07",
+   "group": "de",
+   "kind": "phone",
+   "expected": "06990009610",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Sie erreichen mich unter null sechs neun, neun null null null neun, sechs eins null."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-08",
+   "group": "de",
+   "kind": "phone",
+   "expected": "08999998934",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Rufen Sie mich bitte zurück unter null acht neun, neunundneunzig neunundneunzig acht, dreiundneunzig vier."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-09",
+   "group": "de",
+   "kind": "phone",
+   "expected": "02214710911",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Meine Nummer ist null zwei zwei eins, vier sieben eins null, neun eins eins."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-10",
+   "group": "de",
+   "kind": "phone",
+   "expected": "03023125065",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Sie erreichen mich unter null drei null, zwo drei eins zwo fünf, null sechs fünf."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-11",
+   "group": "de",
+   "kind": "phone",
+   "expected": "04066969432",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Rufen Sie mich bitte zurück unter null vier null, sechsundsechzig sechsundneunzig neun, dreiundvierzig zwei."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-12",
+   "group": "de",
+   "kind": "phone",
+   "expected": "06990009450",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Meine Nummer ist null sechs neun, neun null null null neun, vier fünf null."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-13",
+   "group": "de",
+   "kind": "phone",
+   "expected": "08999998357",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Sie erreichen mich unter null acht neun, neun neun neun neun acht, drei fünf sieben."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-14",
+   "group": "de",
+   "kind": "phone",
+   "expected": "02214710208",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Rufen Sie mich bitte zurück unter null zwei zwei eins, siebenundvierzig zehn, zwanzig acht."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-15",
+   "group": "de",
+   "kind": "phone",
+   "expected": "03023125579",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Meine Nummer ist null drei null, zwei drei eins zwei fünf, fünf sieben neun."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-16",
+   "group": "de",
+   "kind": "phone",
+   "expected": "04066969969",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Sie erreichen mich unter null vier null, sechs sechs neun sechs neun, neun sechs neun."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-17",
+   "group": "de",
+   "kind": "phone",
+   "expected": "06990009611",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Rufen Sie mich bitte zurück unter null sechs neun, neunzig null null neun, einundsechzig eins."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-18",
+   "group": "de",
+   "kind": "phone",
+   "expected": "08999998763",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Meine Nummer ist null acht neun, neun neun neun neun acht, sieben sechs drei."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-19",
+   "group": "de",
+   "kind": "phone",
+   "expected": "02214710082",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Sie erreichen mich unter null zwo zwo eins, vier sieben eins null, null acht zwo."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-20",
+   "group": "de",
+   "kind": "phone",
+   "expected": "03023125736",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Rufen Sie mich bitte zurück unter null drei null, dreiundzwanzig zwölf fünf, dreiundsiebzig sechs."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-21",
+   "group": "de",
+   "kind": "phone",
+   "expected": "04066969008",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Meine Nummer ist null vier null, sechs sechs neun sechs neun, null null acht."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-22",
+   "group": "de",
+   "kind": "phone",
+   "expected": "06990009776",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Sie erreichen mich unter null sechs neun, neun null null null neun, sieben sieben sechs."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-23",
+   "group": "de",
+   "kind": "phone",
+   "expected": "08999998219",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Rufen Sie mich bitte zurück unter null acht neun, neunundneunzig neunundneunzig acht, einundzwanzig neun."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-24",
+   "group": "de",
+   "kind": "phone",
+   "expected": "02214710902",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Meine Nummer ist null zwei zwei eins, vier sieben eins null, neun null zwei."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-25",
+   "group": "de",
+   "kind": "phone",
+   "expected": "03023125441",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Sie erreichen mich unter null drei null, zwo drei eins zwo fünf, vier vier eins."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-26",
+   "group": "de",
+   "kind": "phone",
+   "expected": "04066969580",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Rufen Sie mich bitte zurück unter null vier null, sechsundsechzig sechsundneunzig neun, achtundfünfzig null."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-27",
+   "group": "de",
+   "kind": "phone",
+   "expected": "06990009947",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Meine Nummer ist null sechs neun, neun null null null neun, neun vier sieben."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-28",
+   "group": "de",
+   "kind": "phone",
+   "expected": "08999998322",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Sie erreichen mich unter null acht neun, neun neun neun neun acht, drei zwo zwo."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-29",
+   "group": "de",
+   "kind": "phone",
+   "expected": "02214710982",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Rufen Sie mich bitte zurück unter null zwei zwei eins, siebenundvierzig zehn, achtundneunzig zwei."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-30",
+   "group": "de",
+   "kind": "phone",
+   "expected": "03023125684",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Meine Nummer ist null drei null, zwei drei eins zwei fünf, sechs acht vier."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-31",
+   "group": "de",
+   "kind": "phone",
+   "expected": "04066969585",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Sie erreichen mich unter null vier null, sechs sechs neun sechs neun, fünf acht fünf."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-32",
+   "group": "de",
+   "kind": "phone",
+   "expected": "06990009690",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Rufen Sie mich bitte zurück unter null sechs neun, neunzig null null neun, neunundsechzig null."
+    }
+   ]
+  },
+  {
+   "id": "de-phone-33",
+   "group": "de",
+   "kind": "phone",
+   "expected": "08999998595",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Meine Nummer ist null acht neun, neun neun neun neun acht, fünf neun fünf."
+    }
+   ]
+  },
+  {
+   "id": "en-name-00",
+   "group": "en",
+   "kind": "name",
+   "expected": "Wiebke Mühlbauer",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "My name is Wiebke Mühlbauer."
+    }
+   ]
+  },
+  {
+   "id": "en-name-01",
+   "group": "en",
+   "kind": "name",
+   "expected": "Malte Ehrenträger",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "This is Malte Ehrenträger speaking."
+    }
+   ]
+  },
+  {
+   "id": "en-name-02",
+   "group": "en",
+   "kind": "name",
+   "expected": "Henrike Lindqvist",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "The appointment is for Henrike Lindqvist."
+    }
+   ]
+  },
+  {
+   "id": "en-name-03",
+   "group": "en",
+   "kind": "name",
+   "expected": "Jörg Wendler",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "My name is Jörg Wendler."
+    }
+   ]
+  },
+  {
+   "id": "en-name-04",
+   "group": "en",
+   "kind": "name",
+   "expected": "Gesine Pfeiffer",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "This is Gesine Pfeiffer speaking."
+    }
+   ]
+  },
+  {
+   "id": "en-name-05",
+   "group": "en",
+   "kind": "name",
+   "expected": "Rüdiger Wüstenhagen",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "The appointment is for Rüdiger Wüstenhagen."
+    }
+   ]
+  },
+  {
+   "id": "en-name-06",
+   "group": "en",
+   "kind": "name",
+   "expected": "Swantje Stöckl",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "My name is Swantje Stöckl."
+    }
+   ]
+  },
+  {
+   "id": "en-name-07",
+   "group": "en",
+   "kind": "name",
+   "expected": "Hauke Göbel",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "This is Hauke Göbel speaking."
+    }
+   ]
+  },
+  {
+   "id": "en-name-08",
+   "group": "en",
+   "kind": "name",
+   "expected": "Ingeborg Quellenberg",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "The appointment is for Ingeborg Quellenberg."
+    }
+   ]
+  },
+  {
+   "id": "en-name-09",
+   "group": "en",
+   "kind": "name",
+   "expected": "Volker Dreyer",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "My name is Volker Dreyer."
+    }
+   ]
+  },
+  {
+   "id": "en-name-10",
+   "group": "en",
+   "kind": "name",
+   "expected": "Margit Haßelbach",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "This is Margit Haßelbach speaking."
+    }
+   ]
+  },
+  {
+   "id": "en-name-11",
+   "group": "en",
+   "kind": "name",
+   "expected": "Detlef Grünewald",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "The appointment is for Detlef Grünewald."
+    }
+   ]
+  },
+  {
+   "id": "en-name-12",
+   "group": "en",
+   "kind": "name",
+   "expected": "Heike Brandstätter",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "My name is Heike Brandstätter."
+    }
+   ]
+  },
+  {
+   "id": "en-dob-00",
+   "group": "en",
+   "kind": "dob",
+   "expected": "1953-12-24",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "I was born on December twenty-fourth, nineteen fifty-three."
+    }
+   ]
+  },
+  {
+   "id": "en-dob-01",
+   "group": "en",
+   "kind": "dob",
+   "expected": "1977-09-19",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "My date of birth is the nineteenth of September, nineteen seventy-seven."
+    }
+   ]
+  },
+  {
+   "id": "en-dob-02",
+   "group": "en",
+   "kind": "dob",
+   "expected": "1939-05-11",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "Date of birth, May eleventh, nineteen thirty-nine."
+    }
+   ]
+  },
+  {
+   "id": "en-dob-03",
+   "group": "en",
+   "kind": "dob",
+   "expected": "1942-07-22",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "I was born on the twenty-second of July, nineteen forty-two."
+    }
+   ]
+  },
+  {
+   "id": "en-dob-04",
+   "group": "en",
+   "kind": "dob",
+   "expected": "2001-05-25",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "My date of birth is May twenty-fifth, two thousand one."
+    }
+   ]
+  },
+  {
+   "id": "en-dob-05",
+   "group": "en",
+   "kind": "dob",
+   "expected": "1944-01-18",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "Date of birth, the eighteenth of January, nineteen forty-four."
+    }
+   ]
+  },
+  {
+   "id": "en-dob-06",
+   "group": "en",
+   "kind": "dob",
+   "expected": "1940-04-17",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "I was born on April seventeenth, nineteen forty."
+    }
+   ]
+  },
+  {
+   "id": "en-dob-07",
+   "group": "en",
+   "kind": "dob",
+   "expected": "1954-10-25",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "My date of birth is the twenty-fifth of October, nineteen fifty-four."
+    }
+   ]
+  },
+  {
+   "id": "en-dob-08",
+   "group": "en",
+   "kind": "dob",
+   "expected": "2006-02-13",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "Date of birth, February thirteenth, two thousand six."
+    }
+   ]
+  },
+  {
+   "id": "en-dob-09",
+   "group": "en",
+   "kind": "dob",
+   "expected": "1995-05-21",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "I was born on the twenty-first of May, nineteen ninety-five."
+    }
+   ]
+  },
+  {
+   "id": "en-dob-10",
+   "group": "en",
+   "kind": "dob",
+   "expected": "1976-04-03",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "My date of birth is April third, nineteen seventy-six."
+    }
+   ]
+  },
+  {
+   "id": "en-dob-11",
+   "group": "en",
+   "kind": "dob",
+   "expected": "1976-07-22",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "Date of birth, the twenty-second of July, nineteen seventy-six."
+    }
+   ]
+  },
+  {
+   "id": "en-dob-12",
+   "group": "en",
+   "kind": "dob",
+   "expected": "1948-11-20",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "I was born on November twentieth, nineteen forty-eight."
+    }
+   ]
+  },
+  {
+   "id": "en-phone-00",
+   "group": "en",
+   "kind": "phone",
+   "expected": "04066969792",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "My number is zero four zero, double six nine six nine, seven nine two."
+    }
+   ]
+  },
+  {
+   "id": "en-phone-01",
+   "group": "en",
+   "kind": "phone",
+   "expected": "06990009974",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "You can call me back on oh six nine, nine oh double oh nine, nine seven four."
+    }
+   ]
+  },
+  {
+   "id": "en-phone-02",
+   "group": "en",
+   "kind": "phone",
+   "expected": "08999998414",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "It's zero eight nine, nine nine double nine eight, four one four."
+    }
+   ]
+  },
+  {
+   "id": "en-phone-03",
+   "group": "en",
+   "kind": "phone",
+   "expected": "02214710242",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "My number is oh double two one, four seven one oh, two four two."
+    }
+   ]
+  },
+  {
+   "id": "en-phone-04",
+   "group": "en",
+   "kind": "phone",
+   "expected": "03023125967",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "You can call me back on zero three zero, two three one two five, nine six seven."
+    }
+   ]
+  },
+  {
+   "id": "en-phone-05",
+   "group": "en",
+   "kind": "phone",
+   "expected": "04066969551",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "It's oh four oh, double six nine six nine, double five one."
+    }
+   ]
+  },
+  {
+   "id": "en-phone-06",
+   "group": "en",
+   "kind": "phone",
+   "expected": "06990009208",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "My number is zero six nine, nine zero double zero nine, two zero eight."
+    }
+   ]
+  },
+  {
+   "id": "en-phone-07",
+   "group": "en",
+   "kind": "phone",
+   "expected": "08999998147",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "You can call me back on oh eight nine, nine nine double nine eight, one four seven."
+    }
+   ]
+  },
+  {
+   "id": "en-phone-08",
+   "group": "en",
+   "kind": "phone",
+   "expected": "02214710361",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "It's zero double two one, four seven one zero, three six one."
+    }
+   ]
+  },
+  {
+   "id": "en-phone-09",
+   "group": "en",
+   "kind": "phone",
+   "expected": "03023125658",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "My number is oh three oh, two three one two five, six five eight."
+    }
+   ]
+  },
+  {
+   "id": "en-phone-10",
+   "group": "en",
+   "kind": "phone",
+   "expected": "04066969348",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "You can call me back on zero four zero, double six nine six nine, three four eight."
+    }
+   ]
+  },
+  {
+   "id": "en-phone-11",
+   "group": "en",
+   "kind": "phone",
+   "expected": "06990009499",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "It's oh six nine, nine oh double oh nine, four double nine."
+    }
+   ]
+  },
+  {
+   "id": "en-phone-12",
+   "group": "en",
+   "kind": "phone",
+   "expected": "08999998162",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "My number is zero eight nine, nine nine double nine eight, one six two."
+    }
+   ]
+  },
+  {
+   "id": "en-phone-13",
+   "group": "en",
+   "kind": "phone",
+   "expected": "02214710267",
+   "segments": [
+    {
+     "lang": "en",
+     "text": "You can call me back on oh double two one, four seven one oh, two six seven."
+    }
+   ]
+  },
+  {
+   "id": "switch-name-00",
+   "group": "switch",
+   "kind": "name",
+   "expected": "Heike Vogelsang",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Guten Tag, ich hätte gern einen Termin."
+    },
+    {
+     "lang": "en",
+     "text": "Sorry, my German is not so good. My name is Heike Vogelsang."
+    }
+   ]
+  },
+  {
+   "id": "switch-dob-01",
+   "group": "switch",
+   "kind": "dob",
+   "expected": "2005-04-11",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Hallo, ich rufe wegen eines Termins an."
+    },
+    {
+     "lang": "en",
+     "text": "Can we continue in English? My date of birth is the eleventh of April, two thousand five."
+    }
+   ]
+  },
+  {
+   "id": "switch-phone-02",
+   "group": "switch",
+   "kind": "phone",
+   "expected": "03023125797",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Guten Morgen, ich brauche einen Rückruf."
+    },
+    {
+     "lang": "en",
+     "text": "I'm sorry, I'll switch to English. It's zero three zero, two three one two five, seven nine seven."
+    }
+   ]
+  },
+  {
+   "id": "switch-name-03",
+   "group": "switch",
+   "kind": "name",
+   "expected": "Dragan Krämer",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Ja, hallo, ich wollte einen Termin machen."
+    },
+    {
+     "lang": "en",
+     "text": "Is English okay? My name is Dragan Krämer."
+    }
+   ]
+  },
+  {
+   "id": "switch-dob-04",
+   "group": "switch",
+   "kind": "dob",
+   "expected": "1939-10-24",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Grüß Gott, ich hätte eine Frage zu meinem Termin."
+    },
+    {
+     "lang": "en",
+     "text": "Sorry, my German is not so good. My date of birth is October twenty-fourth, nineteen thirty-nine."
+    }
+   ]
+  },
+  {
+   "id": "switch-phone-05",
+   "group": "switch",
+   "kind": "phone",
+   "expected": "08999998023",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Guten Tag, ich hätte gern einen Termin."
+    },
+    {
+     "lang": "en",
+     "text": "Can we continue in English? It's oh eight nine, nine nine double nine eight, oh two three."
+    }
+   ]
+  },
+  {
+   "id": "switch-name-06",
+   "group": "switch",
+   "kind": "name",
+   "expected": "Lena Brandstätter",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Hallo, ich rufe wegen eines Termins an."
+    },
+    {
+     "lang": "en",
+     "text": "I'm sorry, I'll switch to English. My name is Lena Brandstätter."
+    }
+   ]
+  },
+  {
+   "id": "switch-dob-07",
+   "group": "switch",
+   "kind": "dob",
+   "expected": "1987-03-10",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Guten Morgen, ich brauche einen Rückruf."
+    },
+    {
+     "lang": "en",
+     "text": "Is English okay? My date of birth is the tenth of March, nineteen eighty-seven."
+    }
+   ]
+  },
+  {
+   "id": "switch-phone-08",
+   "group": "switch",
+   "kind": "phone",
+   "expected": "04066969921",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Ja, hallo, ich wollte einen Termin machen."
+    },
+    {
+     "lang": "en",
+     "text": "Sorry, my German is not so good. It's zero four zero, double six nine six nine, nine two one."
+    }
+   ]
+  },
+  {
+   "id": "switch-name-09",
+   "group": "switch",
+   "kind": "name",
+   "expected": "Uwe Wendler",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Grüß Gott, ich hätte eine Frage zu meinem Termin."
+    },
+    {
+     "lang": "en",
+     "text": "Can we continue in English? My name is Uwe Wendler."
+    }
+   ]
+  },
+  {
+   "id": "switch-dob-10",
+   "group": "switch",
+   "kind": "dob",
+   "expected": "1969-09-14",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Guten Tag, ich hätte gern einen Termin."
+    },
+    {
+     "lang": "en",
+     "text": "I'm sorry, I'll switch to English. My date of birth is September fourteenth, nineteen sixty-nine."
+    }
+   ]
+  },
+  {
+   "id": "switch-phone-11",
+   "group": "switch",
+   "kind": "phone",
+   "expected": "02214710897",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Hallo, ich rufe wegen eines Termins an."
+    },
+    {
+     "lang": "en",
+     "text": "Is English okay? It's oh double two one, four seven one oh, eight nine seven."
+    }
+   ]
+  },
+  {
+   "id": "switch-name-12",
+   "group": "switch",
+   "kind": "name",
+   "expected": "Björn Brückner",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Guten Morgen, ich brauche einen Rückruf."
+    },
+    {
+     "lang": "en",
+     "text": "Sorry, my German is not so good. My name is Björn Brückner."
+    }
+   ]
+  },
+  {
+   "id": "switch-dob-13",
+   "group": "switch",
+   "kind": "dob",
+   "expected": "1952-07-13",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Ja, hallo, ich wollte einen Termin machen."
+    },
+    {
+     "lang": "en",
+     "text": "Can we continue in English? My date of birth is the thirteenth of July, nineteen fifty-two."
+    }
+   ]
+  },
+  {
+   "id": "switch-phone-14",
+   "group": "switch",
+   "kind": "phone",
+   "expected": "06990009403",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Grüß Gott, ich hätte eine Frage zu meinem Termin."
+    },
+    {
+     "lang": "en",
+     "text": "I'm sorry, I'll switch to English. It's zero six nine, nine zero double zero nine, four zero three."
+    }
+   ]
+  },
+  {
+   "id": "switch-name-15",
+   "group": "switch",
+   "kind": "name",
+   "expected": "Mareike Großkopf",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Guten Tag, ich hätte gern einen Termin."
+    },
+    {
+     "lang": "en",
+     "text": "Is English okay? My name is Mareike Großkopf."
+    }
+   ]
+  },
+  {
+   "id": "switch-dob-16",
+   "group": "switch",
+   "kind": "dob",
+   "expected": "2003-07-08",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Hallo, ich rufe wegen eines Termins an."
+    },
+    {
+     "lang": "en",
+     "text": "Sorry, my German is not so good. My date of birth is July eighth, two thousand three."
+    }
+   ]
+  },
+  {
+   "id": "switch-phone-17",
+   "group": "switch",
+   "kind": "phone",
+   "expected": "03023125379",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Guten Morgen, ich brauche einen Rückruf."
+    },
+    {
+     "lang": "en",
+     "text": "Can we continue in English? It's oh three oh, two three one two five, three seven nine."
+    }
+   ]
+  },
+  {
+   "id": "switch-name-18",
+   "group": "switch",
+   "kind": "name",
+   "expected": "Lutz Dreyer",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Ja, hallo, ich wollte einen Termin machen."
+    },
+    {
+     "lang": "en",
+     "text": "I'm sorry, I'll switch to English. My name is Lutz Dreyer."
+    }
+   ]
+  },
+  {
+   "id": "switch-dob-19",
+   "group": "switch",
+   "kind": "dob",
+   "expected": "1975-05-23",
+   "segments": [
+    {
+     "lang": "de",
+     "text": "Grüß Gott, ich hätte eine Frage zu meinem Termin."
+    },
+    {
+     "lang": "en",
+     "text": "Is English okay? My date of birth is the twenty-third of May, nineteen seventy-five."
+    }
+   ]
+  }
+ ]
+}
