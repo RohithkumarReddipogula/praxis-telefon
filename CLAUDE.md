@@ -68,7 +68,7 @@ uv run python -m praxis_telefon.agent.main dev              # LiveKit Cloud (nee
   - `tests/live/` – live LLM tests (`harness.py`: scripted caller, text-mode session)
   - `tests/data/` – live sentence corpus and reviewed known-bad sentences
 
-## Status (M3, as of 2026-11-07)
+## Status (M3 done, 2026-11-07)
 
 Done and pushed:
 - **Part A, safety:** emergency and suicide phrases (DE/EN) get fixed, uninterruptible
@@ -118,35 +118,46 @@ Done and pushed:
   after a final (`eval/stt_ab/switch_check.py`). `take_message` merges a second reason
   for the same caller into one note. **Voice test 2026-11-07 passed** (3 calls: switch
   to `en` and back, English caller via "English", German message).
-- Last live run (2026-11-07): 99/99 (78 suite + 21 language tests), $0.06; no German
-  sentence in English calls. False-positive corpus: 347 passing live tests.
+- **Part C, FAQ** (`docs/experiments/faq-retrieval.md`, `faq-topic-choice.md`): keyword
+  retrieval (BM25) missed the bar (82–92 % right, up to 28 % false) and was removed; the
+  LLM picks the topic via `practice_info(topic)` (9 topics or `other`), code returns the
+  entry from `faq/faq.json` in the call's language (opening hours from the seed). Second
+  author's 10 questions 100 % / 0 % false, Claude's 122 100 % / 3.2 %. Practice facts are
+  blocked unless `practice_info` backed them (a closed day also by `find_slots`); a
+  crisis-sentence false positive ("nicht auf einen Termin warten") was fixed. Voice test
+  passed (FAQ answers correct, `no_entry` for home visits and flu vaccination).
+- **Part C, barge-in:** `false_interruption_timeout` 1.0 s (was LiveKit's 2.0), `min_duration`
+  0.5 s. Voice test: real interruptions quiet in 0.40 / 0.50 s, "mhm" and a cough pause
+  about 1 s, no `resumed_then_stopped`. `barge_in.py` logs every episode (time to the
+  pause, outcome); `late_transcript.py` logs finals after the turn was committed (0 of 6
+  turns; `min_delay` stays 0.4 s by the rule: change only above 5 % or on a wrong or
+  doubled answer).
+- Last live run (2026-11-07, M3 final): 135/135 (all of `tests/live/`), $0.18; `llm_ttft`
+  p50 816 / p90 2043 ms, first speech 899 / 2328 ms, answer 1611 / 3247 ms. One false
+  positive found and fixed: a move read-back naming "bestehenden" and "neuen" Termin was
+  taken for the new-or-existing question (now needs "oder"). False-positive corpus: 617
+  passing live tests.
+- README updated for all of M3.
 
-Open:
-- **First speech p90 for direct answers:** turns without a tool get no filler, and with
-  `low` the model sometimes thinks long first (first speech p90 3.4 s). Options: a
-  timer-based filler or a shorter thinking time; not built.
-- **Real end-to-end check:** a console session by the user; read `e2e_s`, `is_filler` and
-  `since_caller_s` from the turn log.
-- **English line in the greeting (open option):** with option B an English caller's first
-  line comes back empty from `de`; the bilingual "say that again" message tells them to
-  say "English", so English takes two turns (accepted for now, user 2026-11-07). An English
-  sentence in the greeting would save that turn at about 1.5 s more per call.
-- **Names misheard:** about 1 in 3 German names wrong in the A/B with every setting
+Open for M4:
+- **Controlled barge-in harness:** real session with custom audio in/out, synthetic
+  caller clips at fixed points (real interruption, backchannels, cough, "Stopp"),
+  comparing interruption settings on time to quiet, false and missed interruptions
+  (~$0.17 + ~2,500 ElevenLabs credits). Decided 2026-11-07 to move it here from Part C.
+- **Names misheard:** about 1 in 3 German names wrong in the STT A/B with every setting
   (`de` and `multi` alike, e.g. "Östürk" for Öztürk); German names in English calls
   4–15 % right. Booking and lookup by name need a fallback (spelling, confirm by date
-  of birth); not built.
-- **Part C, in progress (not committed):** FAQ via `practice_info(topic)` (keyword
-  retrieval missed the bar, `docs/experiments/faq-retrieval.md`); practice facts are
-  blocked unless `practice_info` backed them (a closed day also by `find_slots`);
-  barge-in and late-transcript records in the turn log. Next: FAQ live tests, the user's
-  voice test, then barge-in tuning and the `min_delay` decision from the records.
-- **M4: controlled barge-in harness** (moved from Part C, user 2026-11-07): real session
-  with custom audio in/out, synthetic caller clips at fixed points (real interruption,
-  backchannels, cough, "Stopp"), comparing interruption settings on time to quiet,
-  false and missed interruptions (~$0.17 + ~2,500 ElevenLabs credits).
-  - **Late transcript (for barge-in / endpointing tuning):** voice test 2026-11-07, call A
-    at 16:40:14, LiveKit warned "transcript arrives after turn has been committed,
-    consider raising min_delay" (`main.ENDPOINTING`); once in three calls, no visible
-    effect. Check how often it happens before raising `min_delay` (costs latency).
-- Afterwards: README and CLAUDE.md update for all of M3; the user's local
-  `data/praxis.db` must be reseeded for 28 days (`... db.seed --reset`, the user runs it).
+  of birth).
+- **First speech p90 for direct answers:** turns without a tool get no filler, and with
+  `low` the model sometimes thinks long first (first speech p90 2.5–3.4 s). Options: a
+  timer-based filler or a shorter thinking time.
+- **English line in the greeting (open option):** English callers take two turns (their
+  first line is empty on `de`, the bilingual "say that again" asks for "English"); an
+  English sentence in the greeting would save that turn at about 1.5 s more per call.
+- **FAQ gaps:** practice policies outside the FAQ ("keine Befunde telefonisch") are not
+  caught by the fact check; a new entry or filter family if they recur.
+- **Late transcripts:** keep reading `late_transcript_summary` from console sessions; one
+  voice test is a small sample for the 5 % rule.
+- **Real end-to-end latency:** a longer console session; read `e2e_s`, `is_filler` and
+  `since_caller_s` from the turn log.
+- The user's local `data/praxis.db` must be reseeded for 28 days (`... db.seed --reset`).
