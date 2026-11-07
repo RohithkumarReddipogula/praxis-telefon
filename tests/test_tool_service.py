@@ -153,12 +153,42 @@ def test_take_message_twice_in_one_call_saves_one_message(
     assert "bereits gespeichert" in text
 
 
-def test_take_message_different_category_is_a_new_message(
+def test_second_reason_for_the_same_caller_updates_the_note(
     conn: sqlite3.Connection, service: ToolService
 ) -> None:
-    service.take_message(PII_NAME, PII_PHONE, "prescription")
-    service.take_message(PII_NAME, PII_PHONE, "referral")
+    # Regression (voice test 2026-11-07, call 2): take_message "callback", then 45 s later
+    # "prescription" for the same name and number: two notes for one request. Now one
+    # note keeps both reasons (user decision 2026-11-07; replaces "different category is
+    # a new message").
+    service.take_message(PII_NAME, PII_PHONE, "callback")
+    text = service.take_message(PII_NAME, "030-23125-456", "prescription")
+    assert _message_count(conn) == 1
+    row = conn.execute("SELECT reason_category FROM staff_messages").fetchone()
+    assert row["reason_category"] == "callback,prescription"
+    assert "Rückruf" in text and "Rezept" in text and "nicht noch einmal" in text.lower()
+
+
+def test_reasons_are_kept_once_each(conn: sqlite3.Connection, service: ToolService) -> None:
+    for reason in ("callback", "prescription", "callback", "referral", "prescription"):
+        service.take_message(PII_NAME, PII_PHONE, reason)
+    row = conn.execute("SELECT reason_category FROM staff_messages").fetchone()
+    assert row["reason_category"] == "callback,prescription,referral"
+    assert _message_count(conn) == 1
+
+
+def test_another_number_is_a_new_message(conn: sqlite3.Connection, service: ToolService) -> None:
+    service.take_message(PII_NAME, PII_PHONE, "callback")
+    service.take_message(PII_NAME, "040 66969 432", "callback")
     assert _message_count(conn) == 2
+
+
+def test_updated_message_is_logged_as_updated(
+    service: ToolService, captured_logs: io.StringIO
+) -> None:
+    service.take_message(PII_NAME, PII_PHONE, "callback")
+    service.take_message(PII_NAME, PII_PHONE, "prescription")
+    assert '\\"outcome\\":\\"updated\\"' in captured_logs.getvalue()
+    _assert_no_pii(captured_logs.getvalue())
 
 
 def test_take_message_duplicate_is_per_call(conn: sqlite3.Connection) -> None:

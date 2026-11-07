@@ -43,7 +43,8 @@ Clock = Callable[[], datetime]
 class CallGuards:
     offered_slot_ids: set[int] = field(default_factory=set)
     verified_booking_ids: set[int] = field(default_factory=set)
-    saved_messages: dict[tuple[str, str, str], messages.MessageResult] = field(default_factory=dict)
+    # (name key, number) -> (message id, reasons in the order said)
+    saved_messages: dict[tuple[str, str], tuple[int, list[str]]] = field(default_factory=dict)
 
 
 def _parse_date(value: str, error: type[ToolFailure]) -> date:
@@ -183,16 +184,28 @@ class ToolService:
         with self._logged("take_message") as log:
             # Bug (voice test 2026-11-06): the LLM called take_message twice and the
             # team got two identical notes. The same note again in this call is a no-op.
+            # Bug (voice test 2026-11-07): the same caller and number with another reason
+            # gave a second note; now the first note gets the reason too.
             key = (
                 name_key(clean_name(caller_name)),
                 messages.normalize_callback_number(callback_number),
-                reason_category,
             )
             if key in self.guards.saved_messages:
-                log["outcome"] = "duplicate"
-                label = self.guards.saved_messages[key].category_label
+                message_id, reasons = self.guards.saved_messages[key]
+                if reason_category in reasons:
+                    log["outcome"] = "duplicate"
+                    labels = ", ".join(messages.REASON_LABELS_DE[r] for r in reasons)
+                    return (
+                        f"Diese Nachricht ist bereits gespeichert (Anliegen: {labels}). "
+                        "Nicht noch einmal speichern."
+                    )
+                labels = messages.add_reason(
+                    self._conn, message_id=message_id, reasons=[*reasons, reason_category]
+                )
+                reasons.append(reason_category)
+                log["outcome"] = "updated"
                 return (
-                    f"Diese Nachricht ist bereits gespeichert (Anliegen: {label}). "
+                    f"Bestehende Nachricht ergänzt (Anliegen: {labels}). "
                     "Nicht noch einmal speichern."
                 )
             result = messages.take_message(
@@ -202,5 +215,5 @@ class ToolService:
                 callback_number=callback_number,
                 reason_category=reason_category,
             )
-            self.guards.saved_messages[key] = result
+            self.guards.saved_messages[key] = (result.message_id, [reason_category])
             return f"Nachricht für das Praxisteam gespeichert (Anliegen: {result.category_label})."

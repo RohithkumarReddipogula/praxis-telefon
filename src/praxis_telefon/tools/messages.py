@@ -69,3 +69,14 @@ def take_message(
         (name, number, reason_category, to_utc_iso(now)),
     ).lastrowid
     return MessageResult(int(message_id or 0), REASON_LABELS_DE[reason_category])
+
+
+def add_reason(conn: sqlite3.Connection, *, message_id: int, reasons: list[str]) -> str:
+    """Set the note's reasons (comma-separated, in order said); returns the labels."""
+    if any(r not in REASON_LABELS_DE for r in reasons):
+        raise InvalidReasonCategory()
+    conn.execute(
+        "UPDATE staff_messages SET reason_category = ? WHERE id = ?",
+        (",".join(reasons), message_id),
+    )
+    return ", ".join(REASON_LABELS_DE[r] for r in reasons)
