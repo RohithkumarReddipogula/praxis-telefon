@@ -3,6 +3,7 @@
 import io
 import json
 import logging
+import re
 import sqlite3
 from collections.abc import Callable, Iterator
 
@@ -20,7 +21,8 @@ from tests.conftest import NOW, PHONE
 PII_NAME = "Wilhelmina Quellenberg"
 PII_DOB = "1971-04-23"
 PII_PHONE = PHONE
-PII_VALUES = (PII_NAME, "Quellenberg", PII_DOB, "1971", "23125", "456")
+PII_DOB_DE = "23.04.1971"  # the same date as spoken/written in German
+PII_VALUES = (PII_NAME, "Quellenberg", PII_DOB, PII_DOB_DE, "1971", "23125", "456")
 
 
 @pytest.fixture
@@ -177,9 +179,63 @@ def test_duplicate_message_is_logged_as_duplicate(
 # --- privacy ---------------------------------------------------------------------------
 
 
+# Fields LiveKit's JSON formatter adds to every line; they never hold tool arguments.
+_LOG_METADATA = ("timestamp", "pid", "level", "name")
+
+
+def _without_metadata(line: str) -> str:
+    try:
+        record = json.loads(line)
+    except ValueError:
+        return line
+    if not isinstance(record, dict):
+        return line
+    kept = {k: v for k, v in record.items() if k not in _LOG_METADATA and not k.startswith("code.")}
+    return json.dumps(kept, ensure_ascii=False)
+
+
+def _whole(value: str) -> re.Pattern[str]:
+    """The value on its own: not inside a word or a longer number, and not the digits of
+    a decimal such as a duration "1.456" (a timestamp's "197186" holds "1971")."""
+    return re.compile(rf"(?<!\w)(?<!\d[.,]){re.escape(value)}(?!\w)(?![.,]\d)")
+
+
 def _assert_no_pii(text: str) -> None:
-    for value in PII_VALUES:
-        assert value not in text, f"leaked {value!r}"
+    searched = "\n".join(_without_metadata(line) for line in text.splitlines())
+    for value in (*PII_VALUES, PII_PHONE):
+        assert not _whole(value).search(searched), f"leaked {value!r}"
+
+
+def test_privacy_check_ignores_pii_digits_inside_log_metadata() -> None:
+    # Regression (flaky test_tool_logs_contain_no_arguments, 2026-11-06): the synthetic
+    # birth year "1971" appeared inside the timestamp "...T21:19:50.197186+00:00".
+    # pid, source line and the tool's duration are plain numbers that can hit too.
+    record = {
+        "message": json.dumps({"event": "tool", "tool": "book", "outcome": "ok", "ms": 1.456}),
+        "level": "INFO",
+        "pid": 456,
+        "code.line.number": 1971,
+        "timestamp": "2026-11-06T21:19:50.197186+00:00",
+    }
+    _assert_no_pii(json.dumps(record))
+
+
+@pytest.mark.parametrize(
+    "leak",
+    [
+        "Termin für Wilhelmina Quellenberg",
+        "geboren 1971",
+        "geboren am 1971-04-23",
+        # German form: the year alone no longer matches after "04." (decimal rule).
+        "geboren am 23.04.1971",
+        "Rückruf unter 030 23125 456",
+        "Nummer endet auf 456.",
+    ],
+)
+def test_privacy_check_still_finds_real_leaks(leak: str) -> None:
+    line = json.dumps({"message": leak, "pid": 1, "timestamp": "2026-11-06T21:19:50.000001"})
+    with pytest.raises(AssertionError, match="leaked"):
+        _assert_no_pii(line)
 
 
 def _tool_records(output: str) -> list[dict[str, object]]:
