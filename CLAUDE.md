@@ -119,10 +119,22 @@ Open:
   3 sentences (`meta:language`). One wrong tag must not switch the call: fixed by the
   call-language rule (done, above). Next: the user's second voice test with `multi`,
   then `multi` as the default.
-- **Gap with `STT_LANGUAGE=de`:** an explicit request ("Can we speak English?") switches
-  the agent to English, but Deepgram `de` cannot hear English (110 of 160 English A/B
-  clips empty), so the caller ends in the two-strike handover. Fix: make `multi` the
-  default after the user's second voice test (planned; no code yet).
+- **Gap with `STT_LANGUAGE=de`:** Deepgram `de` cannot hear English (110 of 160 English A/B
+  clips empty; the user's own "Can we speak English?" empty too), so English callers ended
+  in the two-strike handover. `multi` as the default is **rejected**: with the user's
+  accented German it tagged Telugu/Afrikaans/Norwegian and lost digits, also with
+  `language_hint` (docs/experiments/stt-language.md). **Fix: option B** (built, not yet
+  committed): `de` by default; the stream is switched to `en` on "English" / "Englisch"
+  alone (the bilingual "say that again" message asks for it) or "Können wir Englisch
+  sprechen?", and back to `de` on "Deutsch" / "Deutsche" (as `en` writes them) or
+  "German" alone or in a request; an empty final on `en` in a call that started German
+  switches back (no strike, bilingual "please repeat"). Based on the user's own-voice
+  recordings (`eval/my_voice.py`, gitignored audio). No audio lost when switching after
+  a final (`eval/stt_ab/switch_check.py`). Needs the user's voice test.
+- **English line in the greeting (open option):** with option B an English caller's first
+  line comes back empty from `de`; the bilingual "say that again" message tells them to
+  say "English", so English takes two turns (accepted for now, user 2026-11-07). An English
+  sentence in the greeting would save that turn at about 1.5 s more per call.
 - **Names misheard:** about 1 in 3 German names wrong in the A/B with every setting
   (`de` and `multi` alike, e.g. "Östürk" for Öztürk); German names in English calls
   4–15 % right. Booking and lookup by name need a fallback (spelling, confirm by date
