@@ -16,6 +16,8 @@ from typing import Literal
 SUPPORTED_LLM_PROVIDERS = ("openrouter",)
 SUPPORTED_TTS_PROVIDERS = ("elevenlabs",)
 SUPPORTED_LANGUAGES = ("de", "en")
+# Deepgram language; "" follows DEFAULT_LANGUAGE. "multi": docs/experiments/stt-language.md
+STT_LANGUAGES = ("de", "en", "multi")
 LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
 # OpenRouter `reasoning_effort`. Gemini 3.x Flash reasons mandatorily (lowest: "low");
 # Claude Haiku 5.5 accepts "none".
@@ -40,6 +42,7 @@ class Settings:
     elevenlabs_api_key: str = field(repr=False)
     elevenlabs_voice_id: str
     default_language: Language
+    stt_language: str  # "" = default_language
     log_level: str
     database_path: Path
 
@@ -77,6 +80,9 @@ class Settings:
         elevenlabs_api_key = require("ELEVENLABS_API_KEY")
         elevenlabs_voice_id = require("ELEVENLABS_VOICE_ID")
         default_language = choice("DEFAULT_LANGUAGE", "de", SUPPORTED_LANGUAGES)
+        stt_language = get("STT_LANGUAGE").lower()
+        if stt_language and stt_language not in STT_LANGUAGES:
+            problems.append(f"STT_LANGUAGE must be empty or one of {', '.join(STT_LANGUAGES)}")
         log_level = choice("LOG_LEVEL", "INFO", LOG_LEVELS)
         database_path = Path(get("DATABASE_PATH", "./data/praxis.db"))
 
@@ -93,6 +99,7 @@ class Settings:
             elevenlabs_api_key=elevenlabs_api_key,
             elevenlabs_voice_id=elevenlabs_voice_id,
             default_language="en" if default_language == "en" else "de",
+            stt_language=stt_language,
             log_level=log_level,
             database_path=database_path,
         )

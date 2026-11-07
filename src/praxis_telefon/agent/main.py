@@ -76,8 +76,12 @@ def open_database(settings: Settings) -> ToolService:
 
 
 def stt_options(settings: Settings) -> dict[str, Any]:
-    """Deepgram options. A fixed language beats `multi` for German accuracy."""
-    return {"model": DEEPGRAM_MODEL, "language": settings.default_language}
+    """Deepgram options. The call's language unless STT_LANGUAGE says otherwise.
+
+    `multi` beat `de` on synthetic German (docs/experiments/stt-language.md) but in M1
+    heard real non-native German as English, so it stays opt-in until a voice test.
+    """
+    return {"model": DEEPGRAM_MODEL, "language": settings.stt_language or settings.default_language}
 
 
 def openrouter_provider() -> OpenRouterProviderPreferences:

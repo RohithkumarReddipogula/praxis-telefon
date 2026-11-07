@@ -37,6 +37,25 @@ def test_stt_follows_default_language() -> None:
     assert main.stt_options(settings(DEFAULT_LANGUAGE="en"))["language"] == "en"
 
 
+def test_stt_multi_is_opt_in() -> None:
+    # STT A/B 2026-11-07 (docs/experiments/stt-language.md): multi +8.8 points on
+    # synthetic German, but the M1 failure (real non-native German heard as English)
+    # needs a voice test first, so multi is chosen explicitly, not by default.
+    opts = main.stt_options(settings(STT_LANGUAGE="multi"))
+    assert opts["language"] == "multi"
+    assert "language_hint" not in opts  # no effect in the A/B (638 of 640 identical)
+    assert main.stt_options(settings(STT_LANGUAGE="de", DEFAULT_LANGUAGE="en"))["language"] == "de"
+
+
+def test_stt_language_rejects_unknown_values() -> None:
+    import pytest
+
+    from praxis_telefon.config import ConfigError
+
+    with pytest.raises(ConfigError, match="STT_LANGUAGE"):
+        settings(STT_LANGUAGE="fr")
+
+
 def _request_sent(s: Settings, *, session_id: str | None = None) -> httpx.Request:
     """The HTTP request build_llm's LLM sends for one reply (mock transport, no network)."""
     sent: list[httpx.Request] = []
