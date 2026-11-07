@@ -52,12 +52,55 @@ def test_caller_speech_while_the_agent_is_silent_is_no_barge_in() -> None:
     assert d.playback_finished(11.0, interrupted=True) is None
 
 
-def test_false_interruption_is_recorded() -> None:
+def test_quiet_is_when_the_agent_pauses_not_when_the_turn_commits() -> None:
+    # LiveKit pauses the audio on an interruption (agent state "listening") and clears it
+    # only when the caller's turn commits; the caller hears silence from the pause.
     d = BargeInDetector()
-    assert d.false_interruption(resumed=True) == {
-        "event": "false_interruption",
+    d.agent_speaking(True)
+    d.caller_started(10.0)
+    d.agent_quiet(10.4)
+    record = d.playback_finished(11.5, interrupted=True)
+    assert record == {"event": "barge_in", "outcome": "stopped", "time_to_quiet_s": 0.4}
+
+
+def test_false_interruption_is_one_barge_in_with_its_pause() -> None:
+    d = BargeInDetector()
+    d.agent_speaking(True)
+    d.caller_started(10.0)
+    d.agent_quiet(10.5)
+    assert d.false_interruption(13.0, resumed=True) == {
+        "event": "barge_in",
+        "outcome": "false_interruption",
+        "time_to_quiet_s": 0.5,
+        "paused_s": 2.5,
         "resumed": True,
     }
+
+
+def test_start_time_is_reset_after_a_false_interruption() -> None:
+    # Bug, voice test 2026-11-07 17:56:48: time_to_quiet_s 10.863 for a quick stop. The
+    # "mhm" start was kept after LiveKit resumed (no playback_finished), so the next real
+    # interruption was measured from the "mhm".
+    d = BargeInDetector()
+    d.agent_speaking(True)
+    d.caller_started(10.0)  # "mhm"
+    d.agent_quiet(10.5)
+    d.false_interruption(13.0, resumed=True)
+    d.agent_speaking(True)  # resumed
+    d.caller_started(20.0)  # "Nein, lieber Donnerstag"
+    d.agent_quiet(20.4)
+    record = d.playback_finished(21.2, interrupted=True)
+    assert record == {"event": "barge_in", "outcome": "stopped", "time_to_quiet_s": 0.4}
+
+
+def test_speech_during_uninterruptible_speech_is_its_own_outcome() -> None:
+    # Voice test 2026-11-07: talking during the uninterruptible greeting was logged as
+    # not_stopped; it is no missed interruption.
+    d = BargeInDetector()
+    d.agent_speaking(True)
+    d.caller_started(10.0, interruptible=False)
+    record = d.playback_finished(14.0, interrupted=False)
+    assert record == {"event": "barge_in", "outcome": "uninterruptible", "time_to_quiet_s": None}
 
 
 def _user(old: str, new: str) -> UserStateChangedEvent:
@@ -74,6 +117,27 @@ class FakeAudioOutput:
 
     def on(self, name: str, handler: Any) -> None:
         self.handlers[name] = handler
+
+
+def test_session_wiring_measures_to_the_pause(caplog: pytest.LogCaptureFixture) -> None:
+    from livekit.agents.voice.io import PlaybackFinishedEvent
+
+    async def scenario() -> None:
+        session: AgentSession[None] = AgentSession(loop=asyncio.get_running_loop())
+        output = FakeAudioOutput()
+        times = iter([10.0, 10.3, 11.4])
+        attach_barge_in(session, clock=lambda: next(times), audio_output=lambda: output)
+        session.emit("agent_state_changed", _agent("thinking", "speaking"))
+        session.emit("user_state_changed", _user("listening", "speaking"))
+        session.emit("agent_state_changed", _agent("speaking", "listening"))  # paused
+        output.handlers["playback_finished"](
+            PlaybackFinishedEvent(playback_position=2.0, interrupted=True)
+        )
+
+    with caplog.at_level(logging.INFO, logger="praxis_telefon.turns"):
+        asyncio.run(scenario())
+    records = [json.loads(r.getMessage()) for r in caplog.records]
+    assert records == [{"event": "barge_in", "outcome": "stopped", "time_to_quiet_s": 0.3}]
 
 
 def test_session_wiring_logs_barge_in(caplog: pytest.LogCaptureFixture) -> None:

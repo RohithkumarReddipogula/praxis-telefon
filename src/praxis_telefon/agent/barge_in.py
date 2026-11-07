@@ -1,12 +1,20 @@
 """Barge-in record: how long the agent keeps talking after the caller starts (M3 Part C).
 
-When the caller starts speaking while the agent speaks, the time until the agent's audio
-output reports an interrupted playback is the time to quiet. If the agent's playback ends
-without an interruption, the caller's speech was talked through (a backchannel, or speech
-LiveKit did not count as an interruption). LiveKit's false-interruption event (the agent
-resumed after the caller went quiet) is logged as well. Times only, never words.
+When the caller starts speaking while the agent speaks, LiveKit pauses the agent's audio
+(its state goes to "listening") once the speech is long enough, and clears the audio
+when the caller's turn commits; without a turn it resumes (a false interruption). The
+caller hears silence from the pause, so time to quiet is caller start -> pause (or ->
+interrupted playback when there was no pause). Outcomes, one record per episode:
+- ``stopped``: the turn committed and the audio was cleared;
+- ``false_interruption``: paused, then resumed (``paused_s``: how long it was quiet);
+- ``not_stopped``: the agent talked through (a backchannel LiveKit did not count);
+- ``uninterruptible``: the caller spoke during speech that cannot be interrupted
+  (greeting, crisis messages); not a miss.
+Times only, never words. The console's speaker buffer (a few tens of ms) is not included.
 
-The console's speaker buffer is not included; it adds a constant few tens of ms.
+Bugs (voice test 2026-11-07): the start of a false interruption ("mhm") was kept after
+the resume, so the next real interruption read 10.863 s; and talk over the greeting was
+logged as not_stopped.
 """
 
 from __future__ import annotations
@@ -32,27 +40,54 @@ class BargeInDetector:
 
     def __init__(self) -> None:
         self._agent_speaking = False
-        self._caller_started_at: float | None = None
+        self._started_at: float | None = None
+        self._quiet_at: float | None = None
+        self._interruptible = True
+
+    def _reset(self) -> None:
+        self._started_at = self._quiet_at = None
+        self._interruptible = True
 
     def agent_speaking(self, speaking: bool) -> None:
         self._agent_speaking = speaking
 
-    def caller_started(self, now: float) -> None:
-        if self._agent_speaking and self._caller_started_at is None:
-            self._caller_started_at = now
+    def caller_started(self, now: float, *, interruptible: bool = True) -> None:
+        if self._agent_speaking and self._started_at is None:
+            self._started_at = now
+            self._interruptible = interruptible
+
+    def agent_quiet(self, now: float) -> None:
+        """The agent's audio paused (state speaking -> listening) during the episode."""
+        if self._started_at is not None and self._quiet_at is None:
+            self._quiet_at = now
+
+    def _time_to_quiet(self, now: float) -> float | None:
+        if self._started_at is None:
+            return None
+        return round((self._quiet_at if self._quiet_at is not None else now) - self._started_at, 3)
 
     def playback_finished(self, now: float, *, interrupted: bool) -> dict[str, Any] | None:
-        started, self._caller_started_at = self._caller_started_at, None
-        if started is None:
+        if self._started_at is None:
             return None
-        return {
-            "event": "barge_in",
-            "outcome": "stopped" if interrupted else "not_stopped",
-            "time_to_quiet_s": round(now - started, 3) if interrupted else None,
-        }
+        if interrupted:
+            record = {"event": "barge_in", "outcome": "stopped",
+                      "time_to_quiet_s": self._time_to_quiet(now)}  # fmt: skip
+        else:
+            outcome = "not_stopped" if self._interruptible else "uninterruptible"
+            record = {"event": "barge_in", "outcome": outcome, "time_to_quiet_s": None}
+        self._reset()
+        return record
 
-    def false_interruption(self, *, resumed: bool) -> dict[str, Any]:
-        return {"event": "false_interruption", "resumed": resumed}
+    def false_interruption(self, now: float, *, resumed: bool) -> dict[str, Any]:
+        record: dict[str, Any] = {
+            "event": "barge_in",
+            "outcome": "false_interruption",
+            "time_to_quiet_s": self._time_to_quiet(now) if self._quiet_at is not None else None,
+            "paused_s": round(now - self._quiet_at, 3) if self._quiet_at is not None else None,
+            "resumed": resumed,
+        }
+        self._reset()
+        return record
 
 
 def _log(record: dict[str, Any] | None) -> None:
@@ -79,6 +114,8 @@ def attach_barge_in(
     @session.on("agent_state_changed")
     def _on_agent(ev: AgentStateChangedEvent) -> None:
         speaking = ev.new_state == "speaking"
+        if ev.old_state == "speaking" and not speaking:
+            detector.agent_quiet(now())  # paused for an interruption, or finished
         detector.agent_speaking(speaking)
         output = output_of() if speaking else None
         if output is not None and output not in watched:
@@ -89,10 +126,12 @@ def attach_barge_in(
     def _on_user(ev: UserStateChangedEvent) -> None:
         # Only the start matters: when the caller stops, LiveKit may still stop the agent.
         if ev.new_state == "speaking":
-            detector.caller_started(now())
+            speech = session.current_speech
+            interruptible = speech is None or bool(speech.allow_interruptions)
+            detector.caller_started(now(), interruptible=interruptible)
 
     @session.on("agent_false_interruption")
     def _on_false(ev: AgentFalseInterruptionEvent) -> None:
-        _log(detector.false_interruption(resumed=ev.resumed))
+        _log(detector.false_interruption(now(), resumed=ev.resumed))
 
     return detector
