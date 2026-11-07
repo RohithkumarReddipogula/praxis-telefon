@@ -95,10 +95,22 @@ Open:
   timer-based filler or a shorter thinking time; not built.
 - **Real end-to-end check:** a console session by the user; read `e2e_s`, `is_filler` and
   `since_caller_s` from the turn log.
-- **Part B, English switching (next):** A/B measurement of Deepgram `de` vs `multi` on
-  synthetic ElevenLabs audio (ask before running); reject `multi` if German accuracy on
-  names, dates of birth and phone digits drops by more than 2 percentage points vs `de`.
-  English calls also need meta detection without the language check.
+- **Part B, English switching:** STT A/B done (`docs/experiments/stt-language.md`,
+  `eval/stt_ab/`): `multi` +8.8 points on synthetic German, passes the 2-point rule;
+  `de` hears nothing in 110 of 160 English clips. `multi` is opt-in (`STT_LANGUAGE=multi`);
+  `de` stays the default (`test_stt_uses_german_by_default`, M1: `multi` heard the user's
+  non-native German as English).
+  Voice test 2026-11-07 with `multi`, two calls: English call all finals tagged `en`,
+  `find_slots` and `book` fine. German call: message saved, number right, but 2 German
+  finals tagged `en`; after the first the LLM answered in English and the filter blocked
+  3 sentences (`meta:language`). One wrong tag must not switch the call.
+  Next (step 2b): code decides the call language (switch only after 2 consecutive English
+  finals, Deepgram tag and `detect_language` agreeing), the agent answers in it, and
+  meta detection works in English calls.
+- **Names misheard:** about 1 in 3 German names wrong in the A/B with every setting
+  (`de` and `multi` alike, e.g. "Östürk" for Öztürk); German names in English calls
+  4–15 % right. Booking and lookup by name need a fallback (spelling, confirm by date
+  of birth); not built.
 - **Part C not started:** FAQ with local retrieval, barge-in tuning.
 - Afterwards: README and CLAUDE.md update for all of M3; the user's local
   `data/praxis.db` must be reseeded for 28 days (`... db.seed --reset`, the user runs it).

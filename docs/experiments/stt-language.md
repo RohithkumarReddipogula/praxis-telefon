@@ -77,3 +77,15 @@ fix `de` scored 74.0 % combined, same decision).
 By the rule, `multi` passes. Before it becomes the default, a voice test with the user's
 real non-native German (the M1 failure); until then `de` stays the default and the M1
 regression test stays.
+
+## Voice test (2026-11-07, `STT_LANGUAGE=multi`)
+
+Two calls by the user, real voice, console.
+
+- **English call:** all finals tagged `en`; `find_slots` and `book` worked.
+- **German call** (the user's non-native German): message saved, callback number right,
+  but 2 German finals tagged `en` (10:47:37, 10:48:09). After the first, the LLM answered
+  in English and the sentence filter blocked 3 sentences (`meta:language`).
+
+So `multi` hears both languages, but a single wrong tag must not switch the call. `multi`
+stays opt-in; next, the code decides the call language with hysteresis (step 2b).
