@@ -48,6 +48,8 @@ uv run python -m praxis_telefon.agent.main dev              # LiveKit Cloud (nee
   - `tool_filler.py` – code-spoken "Einen Moment, bitte." when a reply calls a tool silently
   - `call_language.py` – the call's language from the STT finals (2-final rule, explicit
     requests); the LLM, filters and fixed messages follow it
+  - `caller_identity.py` – names the caller introduced as their own; `find_booking` only
+    looks those up (privacy)
   - `barge_in.py` / `late_transcript.py` – Part C measurements in the turn log (time to
     quiet on barge-in; finals after the turn was committed, summary per call)
   - `main.py` – `build_llm`: OpenRouter with prompt caching and a per-call `session_id`
@@ -59,6 +61,9 @@ uv run python -m praxis_telefon.agent.main dev              # LiveKit Cloud (nee
   from the seed); the LLM picks the topic via `practice_info(topic)`
 - `src/praxis_telefon/db/` – SQLite schema, access layer, synthetic seed data (28 days)
 - `eval/` – scripted conversation scenarios and scoring; `leak_report.py` compares live runs
+- `eval/scenarios/` + `eval/harness/` – M4 evaluation harness: 46 YAML scenarios,
+  rule-based callers, deterministic checks, Wilson/bootstrap intervals, cost cap
+  (`runner`, paid; `report`, `compare`, free)
 - `docs/experiments/` – experiment write-ups (`reasoning-leak.md`, `stt-language.md`,
   `faq-retrieval.md`)
 - `eval/faq/` – labelled FAQ questions (Claude's and a second author's) and the LLM
@@ -138,6 +143,37 @@ Done and pushed:
   taken for the new-or-existing question (now needs "oder"). False-positive corpus: 617
   passing live tests.
 - README updated for all of M3.
+
+## Status (M4 in progress, 2026-11-07)
+
+Done and pushed:
+- **Evaluation harness** (`eval/harness/`, `eval/scenarios/`): 46 scenarios in text mode,
+  N=5 each, 4 worker processes, hard cost cap (default $1). Checks from the database and
+  the transcript (task success, tools, unbacked claims, `never_say` leaks, language per
+  turn and actually spoken, read-back = saved number); Wilson per scenario, bootstrap over
+  scenarios overall, bootstrap p50/p95 latency; `compare` pairs by scenario, uses common
+  scenarios only, calls "helps/hurts" only when the interval excludes 0. Run it:
+  `uv run python -m eval.harness.runner [--n 5 --max-usd 1.0 --only ids]`, then
+  `uv run python -m eval.harness.report <run dir>` / `... compare <A> <B>`.
+- **Baseline** (40 scenarios × 5): 200/200, $0.135, first speech p50 1.08 / p95 2.72 s.
+  Its review found the privacy and tool-word issues below.
+- **Privacy:** `find_booking` only for a name the caller introduced as their own
+  (`caller_identity.py`); move and cancel follow (they need a found booking). The filter
+  blocks asking for another person's date of birth (`privacy`), except in a new booking;
+  other people's appointments go to a message for the team. Booking for someone else
+  stays allowed. Limit: name + date of birth is the only check, a caller claiming to be
+  the patient gets through.
+- **Callback number:** `take_message` refuses a number the caller did not say (also said
+  in parts); its result gives the saved number for the read-back (bug: saved 03212345456,
+  read back the caller's correct words).
+- **Tool word:** "book"/"Booking" in a German sentence is `meta:tool`.
+- After the fixes, 46 × 5: 229/230 ($0.165; the miss was a too-strict check, fixed);
+  live suite 135/135 ($0.077).
+
+Next in M4: name fix (find_booking by sound plus exact date of birth; never pick one of
+several matching patients, ask for more details instead), audio layer (synthetic callers
+through real STT/TTS, the user's 12 recordings as extra caller audio, gitignored) and the
+controlled barge-in harness; then CLAUDE.md/README for M4.
 
 Open for M4:
 - **Controlled barge-in harness:** real session with custom audio in/out, synthetic
