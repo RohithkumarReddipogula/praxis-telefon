@@ -31,11 +31,13 @@ from praxis_telefon.tools.errors import (
     BookingDisabled,
     BookingNotForCaller,
     BookingNotVerified,
+    CallbackNumberMismatch,
     InvalidDateOfBirth,
     InvalidTopic,
     SlotNotOffered,
     ToolFailure,
 )
+from praxis_telefon.tools.spoken_numbers import digit_runs
 from praxis_telefon.tools.validation import clean_name
 
 logger = logging.getLogger("praxis_telefon.tools")
@@ -49,6 +51,23 @@ class CallGuards:
     verified_booking_ids: set[int] = field(default_factory=set)
     # (name key, number) -> (message id, reasons in the order said)
     saved_messages: dict[tuple[str, str], tuple[int, list[str]]] = field(default_factory=dict)
+
+
+_MAX_PARTS = 4  # a number may be said in parts: "null drei null" ... "zwei drei eins ..."
+
+
+def _callers_numbers(caller_texts: Iterable[str]) -> set[str]:
+    """Valid callback numbers the caller said, normalised like take_message's: any run of
+    number words, or up to _MAX_PARTS consecutive runs joined (across the caller's lines)."""
+    runs = [r for text in caller_texts for r in digit_runs(text)]
+    out: set[str] = set()
+    for i in range(len(runs)):
+        for j in range(i + 1, min(i + _MAX_PARTS, len(runs)) + 1):
+            try:
+                out.add(messages.normalize_callback_number("".join(runs[i:j])))
+            except ToolFailure:
+                continue
+    return out
 
 
 def _parse_date(value: str, error: type[ToolFailure]) -> date:
@@ -207,8 +226,26 @@ class ToolService:
                 + faq.answer_text(topic, language)
             )
 
-    def take_message(self, caller_name: str, callback_number: str, reason_category: str) -> str:
+    def take_message(
+        self,
+        caller_name: str,
+        callback_number: str,
+        reason_category: str,
+        *,
+        caller_texts: Iterable[str] = (),
+    ) -> str:
+        """``caller_texts``: the caller's lines; a number the caller said there must match
+        (M4 harness rerun 2026-11-07, see CallbackNumberMismatch)."""
         with self._logged("take_message") as log:
+            number = messages.normalize_callback_number(callback_number)
+            said = _callers_numbers(caller_texts)
+            if said and number not in said:
+                raise CallbackNumberMismatch()
+            digits = " ".join(number)
+            read_back = (
+                f" Gespeicherte Rückrufnummer zum Vorlesen, Ziffer für Ziffer: {digits}. "
+                "Lies zur Bestätigung genau diese Nummer vor."
+            )
             # Bug (voice test 2026-11-06): the LLM called take_message twice and the
             # team got two identical notes. The same note again in this call is a no-op.
             # Bug (voice test 2026-11-07): the same caller and number with another reason
@@ -224,7 +261,7 @@ class ToolService:
                     labels = ", ".join(messages.REASON_LABELS_DE[r] for r in reasons)
                     return (
                         f"Diese Nachricht ist bereits gespeichert (Anliegen: {labels}). "
-                        "Nicht noch einmal speichern."
+                        "Nicht noch einmal speichern." + read_back
                     )
                 labels = messages.add_reason(
                     self._conn, message_id=message_id, reasons=[*reasons, reason_category]
@@ -233,7 +270,7 @@ class ToolService:
                 log["outcome"] = "updated"
                 return (
                     f"Bestehende Nachricht ergänzt (Anliegen: {labels}). "
-                    "Nicht noch einmal speichern."
+                    "Nicht noch einmal speichern." + read_back
                 )
             result = messages.take_message(
                 self._conn,
@@ -243,4 +280,7 @@ class ToolService:
                 reason_category=reason_category,
             )
             self.guards.saved_messages[key] = (result.message_id, [reason_category])
-            return f"Nachricht für das Praxisteam gespeichert (Anliegen: {result.category_label})."
+            return (
+                f"Nachricht für das Praxisteam gespeichert (Anliegen: {result.category_label})."
+                + read_back
+            )

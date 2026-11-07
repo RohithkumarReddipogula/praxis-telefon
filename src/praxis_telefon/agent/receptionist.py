@@ -422,10 +422,18 @@ class Receptionist(Agent):
 
         Args:
             caller_name: Caller's first and last name.
-            callback_number: German phone number for the callback, as digits, e.g.
-                "030 23125456". Spoken digits are converted, but digits are preferred.
+            callback_number: The callback number exactly as the caller said it, e.g.
+                "null drei null, zwei drei eins zwei fünf"; code converts it. Must be a
+                number the caller said in this call.
             reason_category: Category of the request; never record symptoms.
         """
+        callers = [
+            item.text_content or ""
+            for item in self.chat_ctx.items
+            if isinstance(item, llm.ChatMessage) and item.role == "user"
+        ]
         return _run(
-            lambda: self._service.take_message(caller_name, callback_number, reason_category)
+            lambda: self._service.take_message(
+                caller_name, callback_number, reason_category, caller_texts=callers
+            )
         )

@@ -119,3 +119,49 @@ def spoken_to_digits(raw: str) -> str:
     if not out:
         raise ValueError("no digits")
     return ("+" if plus else "") + "".join(out)
+
+
+_MIN_PHONE_DIGITS = 6
+
+
+def _is_number_word(word: str) -> bool:
+    if word.isdigit() or word in _REPEAT or word == "plus":
+        return True
+    return (
+        word in _EN_UNITS or word in _EN_TEENS or word in _EN_TENS or _german_word(word) is not None
+    )
+
+
+def digit_runs(text: str) -> list[str]:
+    """Digit strings of every run of number words or digits, in order (any length)."""
+    words = normalize(text).split()
+    runs: list[str] = []
+    i = 0
+    while i < len(words):
+        if not _is_number_word(words[i]):
+            i += 1
+            continue
+        j = i
+        run: list[str] = []
+        while j < len(words) and (
+            _is_number_word(words[j])
+            or (words[j] in _FILLERS and j + 1 < len(words) and _is_number_word(words[j + 1]))
+        ):
+            run.append(words[j])
+            j += 1
+        try:
+            digits = re.sub(r"[^\d+]", "", spoken_to_digits(" ".join(run)))
+        except ValueError:
+            digits = ""
+        if digits:
+            runs.append(digits)
+        i = j
+    return runs
+
+
+def phone_numbers_in(text: str) -> set[str]:
+    """Digit strings of the phone numbers in a caller's words (runs of number words or
+    digits giving at least 6 digits). Years ("neunzehnhundertneunundsiebzig"), ordinals
+    and a lone "ein" are not phone numbers. M4 harness rerun 2026-11-07: take_message
+    checks the LLM's number against what the caller said (agent/tool_service.py)."""
+    return {r for r in digit_runs(text) if len(r.lstrip("+")) >= _MIN_PHONE_DIGITS}

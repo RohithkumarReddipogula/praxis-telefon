@@ -88,6 +88,17 @@ class InvalidReasonCategory(ToolFailure):
     message = "Bitte eine der vorgegebenen Kategorien für das Anliegen wählen."
 
 
+class CallbackNumberMismatch(ToolFailure):
+    # M4 harness rerun 2026-11-07: the LLM turned the caller's spoken digits into a wrong
+    # number; the caller heard the right one read back, the team got the wrong one.
+    code = "callback_number_mismatch"
+    message = (
+        "Diese Nummer hat der Anrufer nicht genannt. Übergib die Rückrufnummer genau in den "
+        "Worten des Anrufers, zum Beispiel null drei null, zwei drei eins zwei fünf; sie "
+        "wird im Code umgewandelt."
+    )
+
+
 class BookingNotForCaller(ToolFailure):
     # Privacy (M4 baseline 2026-11-07): only the caller's own appointments are looked up.
     code = "booking_not_for_caller"
