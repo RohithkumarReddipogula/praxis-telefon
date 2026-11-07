@@ -18,16 +18,18 @@ import json
 import logging
 import sqlite3
 import time
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import date, datetime
 
 from praxis_telefon import faq
+from praxis_telefon.agent import caller_identity
 from praxis_telefon.db.schema import name_key
 from praxis_telefon.tools import messages, relative_dates, scheduling
 from praxis_telefon.tools.errors import (
     BookingDisabled,
+    BookingNotForCaller,
     BookingNotVerified,
     InvalidDateOfBirth,
     InvalidTopic,
@@ -140,9 +142,15 @@ class ToolService:
             prefix = "Bereits gebucht" if result.already_booked else "Gebucht"
             return f"{prefix}: booking_id={result.booking_id}, {result.slot.spoken}."
 
-    def find_booking(self, patient_name: str, date_of_birth: str) -> str:
+    def find_booking(
+        self, patient_name: str, date_of_birth: str, *, caller_texts: Iterable[str] = ()
+    ) -> str:
+        """``caller_texts``: the caller's lines in this call; only the caller's own name
+        is looked up (privacy, agent/caller_identity.py)."""
         with self._logged("find_booking"):
             self._require_booking()
+            if not caller_identity.is_caller(patient_name, caller_texts):
+                raise BookingNotForCaller()
             bookings = scheduling.find_booking(
                 self._conn,
                 now=self._clock(),

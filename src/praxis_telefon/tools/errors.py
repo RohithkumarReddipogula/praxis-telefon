@@ -88,6 +88,17 @@ class InvalidReasonCategory(ToolFailure):
     message = "Bitte eine der vorgegebenen Kategorien für das Anliegen wählen."
 
 
+class BookingNotForCaller(ToolFailure):
+    # Privacy (M4 baseline 2026-11-07): only the caller's own appointments are looked up.
+    code = "booking_not_for_caller"
+    message = (
+        "Termine kann ich nur für die anrufende Person selbst nachsehen. Nenne keine Termine "
+        "anderer Personen und frage nicht nach deren Geburtsdatum. Für Änderungen am Termin "
+        "einer anderen Person biete an, eine Nachricht für das Praxisteam aufzunehmen; einen "
+        "neuen Termin für eine andere Person kannst du buchen."
+    )
+
+
 class InvalidTopic(ToolFailure):
     # FAQ measurement 2026-11-07: the LLM sent "weekend"; it must pick a listed topic.
     code = "invalid_topic"

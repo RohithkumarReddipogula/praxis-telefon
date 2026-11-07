@@ -149,6 +149,11 @@ _FACT_NOTE = (
     "Krankschreibungen, Feiertage, Versichertenkarte, neue Patienten) nur mit practice_info "
     "und nur mit dessen Text. Rufe practice_info auf oder sage, dass du es nicht weißt."
 )
+_PRIVACY_NOTE = (
+    "WICHTIG: Frage nicht nach dem Geburtsdatum einer anderen Person, um deren Termin "
+    "nachzusehen, und nenne keine Termine anderer Personen. Für Änderungen am Termin einer "
+    "anderen Person biete eine Nachricht für das Praxisteam an."
+)
 _INTENT_NOTE = (
     "WICHTIG: Frage nicht, ob es um einen neuen oder einen bestehenden Termin geht. "
     "Spricht der Anrufer nicht ausdrücklich von seinem eigenen, schon vereinbarten Termin, "
@@ -183,6 +188,8 @@ def retry_note_for(reasons: list[str], language: Language = "de") -> str:
         notes.append(_WEEKDAY_NOTE)
     if any(r.startswith("fact:") for r in reasons):
         notes.append(_FACT_NOTE)
+    if "privacy" in reasons:
+        notes.append(_PRIVACY_NOTE)
     return " ".join(notes)
 
 

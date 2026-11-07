@@ -327,15 +327,23 @@ class Receptionist(Agent):
     async def find_booking(
         self, context: RunContext[Any], patient_name: str, date_of_birth: str
     ) -> str:
-        """Look up the patient's upcoming appointments by name and date of birth.
+        """Look up the caller's own upcoming appointments by name and date of birth.
 
-        Call as soon as both are known, without asking for confirmation first.
+        Call as soon as both are known, without asking for confirmation first. Only for
+        the caller themself: never for another person's appointment.
 
         Args:
             patient_name: Patient's first and last name.
             date_of_birth: Patient's date of birth, ISO format YYYY-MM-DD.
         """
-        return _run(lambda: self._service.find_booking(patient_name, date_of_birth))
+        callers = [
+            item.text_content or ""
+            for item in self.chat_ctx.items
+            if isinstance(item, llm.ChatMessage) and item.role == "user"
+        ]
+        return _run(
+            lambda: self._service.find_booking(patient_name, date_of_birth, caller_texts=callers)
+        )
 
     @function_tool
     async def move_booking(

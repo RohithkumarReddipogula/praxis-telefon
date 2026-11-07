@@ -12,7 +12,8 @@ what is known about the call (``FilterContext``) and dropped if it:
 - names a weekday or month that neither the caller, a tool result nor today's date
   named, i.e. a date the LLM worked out itself (``weekday``),
 - states a practice fact (opening hours, address, parking, ...) that practice_info has
-  not backed in this call (``fact:<kind>``; a closed day is also backed by find_slots).
+  not backed in this call (``fact:<kind>``; a closed day is also backed by find_slots),
+- asks for another person's date of birth outside a new booking (``privacy``).
 
 A sentence with only a claim is held until the next one: a following confirmation
 question ("Stimmt das so?") makes it a read-back and both are released. A dropped
@@ -28,13 +29,14 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from collections.abc import AsyncIterable, AsyncIterator, Callable
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from livekit.agents import FlushSentinel, llm
 
-from praxis_telefon.agent import call_language
+from praxis_telefon.agent import call_language, caller_identity
 from praxis_telefon.agent.claim_check import (
     BACKED_BY,
     is_confirmation_question,
@@ -110,6 +112,31 @@ class FilterContext:
         )
 
 
+# Privacy (M4 baseline 2026-11-07, injection_other_patient): asking for another person's
+# date of birth to look them up ("Wie lautet das Geburtsdatum von Erika Mustermann?").
+# Allowed for the caller's own name, and while booking a new appointment (find_slots has
+# run), where someone else's date of birth is needed.
+_WHO = r"(?P<who>[A-ZÄÖÜ][\wäöüß-]+(?:\s+[A-ZÄÖÜ][\wäöüß-]+)*|(?i:the patient))"
+_THIRD_PARTY_DOB = (
+    re.compile(
+        r"(?i:\b(?:geburtsdatum|geburtstag|date of birth|birthday)\b.{0,20}?\b(?:von|der|des|of))"
+        r"\s+(?:(?i:frau|herrn?|mr|mrs|ms)\.?\s+)?" + _WHO
+    ),
+    re.compile(_WHO + r"'s\s+(?i:date of birth|birthday)"),
+)
+
+
+def asks_third_party_dob(sentence: str, ctx: FilterContext) -> bool:
+    if "find_slots" in ctx.succeeded:
+        return False
+    own = caller_identity.self_names(ctx.caller_texts)
+    for pattern in _THIRD_PARTY_DOB:
+        for m in pattern.finditer(sentence):
+            if caller_identity.name_key(m["who"]) not in own:
+                return True
+    return False
+
+
 # Practice facts (FAQ): only practice_info backs them; a closed day also find_slots, whose
 # result says "Samstag, 14. November: Praxis geschlossen" (user, 2026-11-07).
 FACT_BACKED_BY: dict[str, frozenset[str]] = {"closed": frozenset({"practice_info", "find_slots"})}
@@ -129,6 +156,8 @@ def check_sentence(sentence: str, ctx: FilterContext) -> list[str]:
         if not FACT_BACKED_BY.get(family, _FACT_DEFAULT) & ctx.succeeded
     ]
     reasons += [f"meta:{why}" for why in meta_reasons(sentence, ctx.language)]
+    if asks_third_party_dob(sentence, ctx):
+        reasons.append("privacy")
     if is_new_or_existing_question(sentence) and (
         ctx.intent_asked or any(mentions_wanted_day(t) for t in ctx.caller_texts)
     ):

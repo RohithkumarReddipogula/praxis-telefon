@@ -21,6 +21,8 @@ from tests.conftest import NOW, PHONE
 PII_NAME = "Wilhelmina Quellenberg"
 PII_DOB = "1971-04-23"
 PII_PHONE = PHONE
+# Privacy (M4, 2026-11-07): find_booking only looks up the caller's own name.
+SELF = (f"Hier ist {PII_NAME}.",)
 PII_DOB_DE = "23.04.1971"  # the same date as spoken/written in German
 PII_VALUES = (PII_NAME, "Quellenberg", PII_DOB, PII_DOB_DE, "1971", "23125", "456")
 
@@ -82,7 +84,9 @@ def test_cancel_rejects_unverified_booking(conn: sqlite3.Connection, service: To
 def test_find_booking_verifies_for_cancel(conn: sqlite3.Connection, service: ToolService) -> None:
     booking_id = _book(service)
     fresh_call = ToolService(conn, lambda: NOW)
-    assert f"booking_id={booking_id}" in fresh_call.find_booking(PII_NAME, PII_DOB)
+    assert f"booking_id={booking_id}" in fresh_call.find_booking(
+        PII_NAME, PII_DOB, caller_texts=SELF
+    )
     assert fresh_call.cancel(booking_id).startswith("Abgesagt")
 
 
@@ -93,7 +97,7 @@ def test_move_needs_verified_booking_and_offered_slot(
     fresh_call = ToolService(conn, lambda: NOW)
     with pytest.raises(errors.BookingNotVerified):
         fresh_call.move(booking_id, 2)
-    fresh_call.find_booking(PII_NAME, PII_DOB)
+    fresh_call.find_booking(PII_NAME, PII_DOB, caller_texts=SELF)
     with pytest.raises(errors.SlotNotOffered):
         fresh_call.move(booking_id, 999)
     new_slot = int(
@@ -105,7 +109,9 @@ def test_move_needs_verified_booking_and_offered_slot(
 def test_wrong_birthday_does_not_verify(conn: sqlite3.Connection, service: ToolService) -> None:
     booking_id = _book(service)
     fresh_call = ToolService(conn, lambda: NOW)
-    assert "Kein Termin gefunden" in fresh_call.find_booking(PII_NAME, "1971-04-24")
+    assert "Kein Termin gefunden" in fresh_call.find_booking(
+        PII_NAME, "1971-04-24", caller_texts=SELF
+    )
     with pytest.raises(errors.BookingNotVerified):
         fresh_call.cancel(booking_id)
 
@@ -113,7 +119,7 @@ def test_wrong_birthday_does_not_verify(conn: sqlite3.Connection, service: ToolS
 @pytest.mark.parametrize("bad", ["23.04.1971", "1971-13-01", "gestern"])
 def test_unparseable_birthday(service: ToolService, bad: str) -> None:
     with pytest.raises(errors.InvalidDateOfBirth):
-        service.find_booking(PII_NAME, bad)
+        service.find_booking(PII_NAME, bad, caller_texts=SELF)
 
 
 def test_unparseable_date(service: ToolService) -> None:
@@ -284,7 +290,7 @@ def _tool_records(output: str) -> list[dict[str, object]]:
 
 def test_tool_logs_contain_no_arguments(service: ToolService, captured_logs: io.StringIO) -> None:
     booking_id = _book(service)
-    service.find_booking(PII_NAME, PII_DOB)
+    service.find_booking(PII_NAME, PII_DOB, caller_texts=SELF)
     service.cancel(booking_id)
     service.take_message(PII_NAME, PII_PHONE, "callback")
     with pytest.raises(errors.InvalidName):
@@ -319,7 +325,7 @@ def test_failure_messages_never_echo_arguments(service: ToolService) -> None:
     attempts: list[Callable[[], object]] = [
         lambda: service.book(1, PII_NAME, PII_DOB),
         lambda: service.find_booking("Quellenberg", PII_DOB),
-        lambda: service.find_booking(PII_NAME, "1971-23-04"),
+        lambda: service.find_booking(PII_NAME, "1971-23-04", caller_texts=SELF),
         lambda: service.take_message(PII_NAME, "0302", "callback"),
         lambda: service.take_message(PII_NAME, PII_PHONE, "Quellenberg 1971"),
         lambda: service.find_slots("2026-11-09", "any", "Dr. Quellenberg"),
