@@ -48,14 +48,21 @@ uv run python -m praxis_telefon.agent.main dev              # LiveKit Cloud (nee
   - `tool_filler.py` – code-spoken "Einen Moment, bitte." when a reply calls a tool silently
   - `call_language.py` – the call's language from the STT finals (2-final rule, explicit
     requests); the LLM, filters and fixed messages follow it
+  - `barge_in.py` / `late_transcript.py` – Part C measurements in the turn log (time to
+    quiet on barge-in; finals after the turn was committed, summary per call)
   - `main.py` – `build_llm`: OpenRouter with prompt caching and a per-call `session_id`
 - `src/praxis_telefon/safety/` – deterministic emergency/suicide/human-request checks,
   two-strike handover, fixed messages
 - `src/praxis_telefon/tools/` – LLM-callable functions (typed, pure where possible);
   `relative_dates.py` turns the caller's words into dates
+- `src/praxis_telefon/faq/` – synthetic practice FAQ (`faq.json`, DE/EN; opening hours
+  from the seed); the LLM picks the topic via `practice_info(topic)`
 - `src/praxis_telefon/db/` – SQLite schema, access layer, synthetic seed data (28 days)
 - `eval/` – scripted conversation scenarios and scoring; `leak_report.py` compares live runs
-- `docs/experiments/` – experiment write-ups (`reasoning-leak.md`, `stt-language.md`)
+- `docs/experiments/` – experiment write-ups (`reasoning-leak.md`, `stt-language.md`,
+  `faq-retrieval.md`)
+- `eval/faq/` – labelled FAQ questions (Claude's and a second author's) and the LLM
+  topic measurement (`report.py`, paid; `--rescore` after a review)
 - `eval/stt_ab/` – Deepgram language A/B on synthetic ElevenLabs audio (ask before running)
 - `tests/` – unit and regression tests; no network or API keys required
   - `tests/live/` – live LLM tests (`harness.py`: scripted caller, text-mode session)
@@ -128,7 +135,15 @@ Open:
   (`de` and `multi` alike, e.g. "Östürk" for Öztürk); German names in English calls
   4–15 % right. Booking and lookup by name need a fallback (spelling, confirm by date
   of birth); not built.
-- **Part C not started:** FAQ with local retrieval, barge-in tuning.
+- **Part C, in progress (not committed):** FAQ via `practice_info(topic)` (keyword
+  retrieval missed the bar, `docs/experiments/faq-retrieval.md`); practice facts are
+  blocked unless `practice_info` backed them (a closed day also by `find_slots`);
+  barge-in and late-transcript records in the turn log. Next: FAQ live tests, the user's
+  voice test, then barge-in tuning and the `min_delay` decision from the records.
+- **M4: controlled barge-in harness** (moved from Part C, user 2026-11-07): real session
+  with custom audio in/out, synthetic caller clips at fixed points (real interruption,
+  backchannels, cough, "Stopp"), comparing interruption settings on time to quiet,
+  false and missed interruptions (~$0.17 + ~2,500 ElevenLabs credits).
   - **Late transcript (for barge-in / endpointing tuning):** voice test 2026-11-07, call A
     at 16:40:14, LiveKit warned "transcript arrives after turn has been committed,
     consider raising min_delay" (`main.ENDPOINTING`); once in three calls, no visible
