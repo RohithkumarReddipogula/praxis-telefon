@@ -29,8 +29,10 @@ from livekit.plugins import deepgram, elevenlabs, openai, silero
 from livekit.plugins.openai.models import OpenRouterProviderPreferences
 from openai import AsyncClient
 
+from praxis_telefon.agent.barge_in import attach_barge_in
 from praxis_telefon.agent.claim_check import ClaimTracker
 from praxis_telefon.agent.console_audio import release_console_audio
+from praxis_telefon.agent.late_transcript import attach_late_transcript
 from praxis_telefon.agent.prompts import GREETING_DE
 from praxis_telefon.agent.receptionist import Receptionist
 from praxis_telefon.agent.tool_filler import is_tool_filler
@@ -230,6 +232,9 @@ async def entrypoint(ctx: JobContext) -> None:
     agent = Receptionist(service, on_language_change=stt_switcher(settings, session))
     # Caller spoke but STT produced nothing: counts as a strike (two in a row: handover).
     attach_unrecognized_speech(session, agent.on_unrecognized_speech)
+    # Part C measurements: time to quiet on barge-in; finals after the turn was committed.
+    attach_barge_in(session)
+    attach_late_transcript(session)
 
     await session.start(agent=agent, room=ctx.room, record=False)
     session.say(GREETING_DE, allow_interruptions=False)
