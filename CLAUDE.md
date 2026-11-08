@@ -136,7 +136,7 @@ Done and pushed:
   about 1 s, no `resumed_then_stopped`. `barge_in.py` logs every episode (time to the
   pause, outcome); `late_transcript.py` logs finals after the turn was committed (0 of 6
   turns; `min_delay` stays 0.4 s by the rule: change only above 5 % or on a wrong or
-  doubled answer).
+  doubled answer, and only after at least 40 turns of data, user 2026-11-08).
 - Last live run (2026-11-07, M3 final): 135/135 (all of `tests/live/`), $0.18; `llm_ttft`
   p50 816 / p90 2043 ms, first speech 899 / 2328 ms, answer 1611 / 3247 ms. One false
   positive found and fixed: a move read-back naming "bestehenden" and "neuen" Termin was
@@ -170,6 +170,36 @@ Done and pushed:
 - After the fixes, 46 × 5: 229/230 ($0.165; the miss was a too-strict check, fixed);
   live suite 135/135 ($0.077).
 
+## Status (M5/M6, 2026-11-08)
+
+M5 and M6 basic come before the rest of M4 (user 2026-11-08). Done and pushed:
+- **Cloud agent** on LiveKit Cloud (project `praxis-telefon-demo`, EU data region, agent
+  `CA_oRRNE5dv7jQB` in `eu-central`, free Build plan; `livekit.toml`). Deploy:
+  `lk agent deploy --yes --project praxis-telefon-demo --secrets-file .env.demo .` (asks
+  first). `.env.demo` holds the demo keys (OpenRouter key with a credit limit, Deepgram
+  and ElevenLabs keys `praxis-demo`, `DEMO_HASH_KEY`); never open, read or print it; the
+  upload excludes `.env*` and ignored files.
+- **Dockerfile:** base image `ghcr.io/astral-sh/uv:python3.12-bookworm-slim` (LiveKit's
+  template; a version-pinned tag did not exist); dependencies and model weights installed
+  as the runtime user. Synthetic DB seeded at start; demo mode on.
+- **Demo protections** (`agent/demo.py`): 5 min per call (warning 1 min before), 3 calls
+  per caller and day, 15 calls and 45 minutes per day; withheld numbers count against
+  the overall limits; caller numbers only as HMAC with `DEMO_HASH_KEY`; bilingual demo
+  greeting. Counts in a file on the container (reset on restart; hard caps at providers).
+- **Consent before book/move/cancel** (`agent/consent.py`, bug from the browser test: book
+  without a read-back): the agent's last question before the caller's line is a
+  confirmation question, and the line is a yes (starts with Ja/Yes or a listed form;
+  nein/aber/lieber/doch nicht/nicht/no/but/rather refuse; "Alles okay, danke. Tschüs."
+  is no yes). The refusal note never asks the caller for a particular word.
+- **False strike fixed:** interim transcripts count as recognised speech;
+  `utterance_timing` logs times and counts per utterance.
+- Browser tests on the cloud agent: greeting, FAQ, filler, no false strike, "Ja, aber
+  lieber um neun Uhr" not booked, booking after "Ja".
+
+Next: the phone number (free LiveKit US number now; Telnyx Berlin/national number when
+approved), inbound only, dispatch rule to `praxis-telefon`; phone tests. Open: the agent
+sometimes still says "Please answer yes or no" after a consent refusal.
+
 Next in M4: name fix (find_booking by sound plus exact date of birth; never pick one of
 several matching patients, ask for more details instead), audio layer (synthetic callers
 through real STT/TTS, the user's 12 recordings as extra caller audio, gitignored) and the
@@ -192,8 +222,9 @@ Open for M4:
   English sentence in the greeting would save that turn at about 1.5 s more per call.
 - **FAQ gaps:** practice policies outside the FAQ ("keine Befunde telefonisch") are not
   caught by the fact check; a new entry or filter family if they recur.
-- **Late transcripts:** keep reading `late_transcript_summary` from console sessions; one
-  voice test is a small sample for the 5 % rule.
+- **Late transcripts:** keep reading `late_transcript_summary`; the 5 % rule applies only
+  after at least 40 turns of data. So far 1 of 20 turns (three cloud browser calls 2026-11-08,
+  0.047 s after the commit, no visible effect); `min_delay` stays 0.4 s.
 - **Real end-to-end latency:** a longer console session; read `e2e_s`, `is_filler` and
   `since_caller_s` from the turn log.
 - The user's local `data/praxis.db` must be reseeded for 28 days (`... db.seed --reset`).
