@@ -246,3 +246,21 @@ def test_dockerfile_never_copies_env_and_runs_the_agent() -> None:
     assert "uv sync --frozen --no-dev" in text
     assert '"start"' in text  # production mode, not dev/console
     assert "SEED_ON_START=1" in text and "DEMO_MODE=1" in text
+
+
+def test_dockerfile_base_image_is_the_livekit_template_one() -> None:
+    # Bug, first deployment 2026-11-08: "ghcr.io/astral-sh/uv:0.13.5-python3.12-bookworm-slim:
+    # not found". LiveKit's own template (lk agent dockerfile) uses this tag.
+    text = (ROOT / "Dockerfile").read_text()
+    assert "FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim" in text
+    assert "0.13.5-python" not in text
+
+
+def test_model_weights_are_downloaded_as_the_runtime_user() -> None:
+    # Found with the first deployment: download-files ran as root, so the turn-detector
+    # weights went to root's cache while the agent runs as "agent" and reads its own.
+    lines = [line.strip() for line in (ROOT / "Dockerfile").read_text().splitlines()]
+    user = next(i for i, line in enumerate(lines) if line.startswith("USER agent"))
+    download = next(i for i, line in enumerate(lines) if "download-files" in line)
+    sync = next(i for i, line in enumerate(lines) if line.startswith("RUN uv sync"))
+    assert user < sync < download
