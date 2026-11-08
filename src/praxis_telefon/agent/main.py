@@ -5,6 +5,7 @@ Run with ``uv run python -m praxis_telefon.agent.main console`` (see README).
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import uuid
@@ -29,6 +30,7 @@ from livekit.plugins import deepgram, elevenlabs, openai, silero
 from livekit.plugins.openai.models import OpenRouterProviderPreferences
 from openai import AsyncClient
 
+from praxis_telefon.agent import demo
 from praxis_telefon.agent.barge_in import attach_barge_in
 from praxis_telefon.agent.claim_check import ClaimTracker
 from praxis_telefon.agent.console_audio import release_console_audio
@@ -41,6 +43,7 @@ from praxis_telefon.agent.turn_log import build_turn_record, format_turn_record
 from praxis_telefon.agent.unrecognized_speech import attach_unrecognized_speech
 from praxis_telefon.config import Settings
 from praxis_telefon.db.schema import PRACTICE_TZ, connect
+from praxis_telefon.db.seed import seed
 from praxis_telefon.logging_privacy import install_pii_filter
 from praxis_telefon.safety.phrases import Language
 
@@ -74,13 +77,27 @@ class DatabaseMissing(RuntimeError):
     pass
 
 
-def open_database(settings: Settings) -> ToolService:
+def ensure_database(settings: Settings) -> None:
+    """The synthetic database exists; with SEED_ON_START (the cloud container) it is
+    created from the seed (28 days from today, synthetic only). An existing one is kept."""
     path = settings.database_path
-    if not path.exists():
+    if path.exists():
+        return
+    if not settings.seed_on_start:
         raise DatabaseMissing(
             f"Database {path} not found. Create it with: uv run python -m praxis_telefon.db.seed"
         )
-    return ToolService(connect(path), practice_now)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    conn = connect(path)
+    try:
+        seed(conn, start=datetime.now(PRACTICE_TZ).date())
+    finally:
+        conn.close()
+
+
+def open_database(settings: Settings) -> ToolService:
+    ensure_database(settings)
+    return ToolService(connect(settings.database_path), practice_now)
 
 
 def stt_options(settings: Settings) -> dict[str, Any]:
@@ -241,7 +258,51 @@ async def entrypoint(ctx: JobContext) -> None:
     attach_late_transcript(session)
 
     await session.start(agent=agent, room=ctx.room, record=False)
-    session.say(GREETING_DE, allow_interruptions=False)
+    if settings.demo_mode:
+        await run_demo_call(ctx, session, settings)
+    else:
+        session.say(GREETING_DE, allow_interruptions=False)
+
+
+async def run_demo_call(ctx: JobContext, session: AgentSession[Any], settings: Settings) -> None:
+    """Public demo (agent/demo.py): limits per caller and day, the demo greeting, and
+    the call ended after its maximum. A refused call hears a fixed message, no LLM."""
+    participant = await ctx.wait_for_participant()
+    caller = demo.caller_hash(participant.attributes.get("sip.phoneNumber"), settings.demo_hash_key)
+    limiter = demo.CallLimiter(settings.demo_usage_db, settings.demo_limits)
+    decision = limiter.start(caller, practice_now())
+    record = {
+        "event": "demo_call",
+        "caller": caller or "withheld",
+        "allowed": decision.allowed,
+        "reason": decision.reason,
+        "max_s": decision.max_s,
+    }
+    logger.info(json.dumps(record, separators=(",", ":")))  # keyed hash only, never the number
+    if not decision.allowed:
+        await session.say(demo.MESSAGES[decision.reason], allow_interruptions=False)
+        await ctx.delete_room()
+        return
+
+    started = asyncio.get_running_loop().time()
+
+    async def end_after_limit() -> None:
+        warn, end = demo.call_schedule(decision.max_s, settings.demo_limits.warn_before_s)
+        if warn is not None:
+            await asyncio.sleep(warn)
+            session.say(demo.MESSAGES["warn"], allow_interruptions=False)
+        await asyncio.sleep(end - (warn or 0))
+        await session.say(demo.MESSAGES["end"], allow_interruptions=False)
+        await ctx.delete_room()  # hangs up the phone call
+
+    timer = asyncio.create_task(end_after_limit())
+
+    async def on_end() -> None:
+        timer.cancel()
+        limiter.end(decision, asyncio.get_running_loop().time() - started)
+
+    ctx.add_shutdown_callback(on_end)
+    session.say(demo.DEMO_GREETING, allow_interruptions=False)
 
 
 if __name__ == "__main__":

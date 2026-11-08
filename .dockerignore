@@ -1,0 +1,22 @@
+# Keep secrets, recordings, results and local data out of the image (M5).
+# Keys reach the agent only as LiveKit Cloud secrets at runtime.
+.env
+.env.*
+**/.env
+**/.env.*
+.git
+.venv
+__pycache__
+**/__pycache__
+.mypy_cache
+.ruff_cache
+.pytest_cache
+data
+eval/results
+eval
+tests
+docs
+*.wav
+*.db
+*.db-*
+.DS_Store

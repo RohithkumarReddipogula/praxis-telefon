@@ -13,6 +13,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
 
+from praxis_telefon.agent.demo import DemoLimits
+
 SUPPORTED_LLM_PROVIDERS = ("openrouter",)
 SUPPORTED_TTS_PROVIDERS = ("elevenlabs",)
 SUPPORTED_LANGUAGES = ("de", "en")
@@ -49,6 +51,12 @@ class Settings:
     stt_language_hint: tuple[str, ...]  # empty: no hint
     log_level: str
     database_path: Path
+    # M5 public demo (agent/demo.py): limits, keyed caller hash, synthetic DB at start.
+    demo_mode: bool = False
+    demo_hash_key: str = field(default="", repr=False)
+    demo_limits: DemoLimits = field(default_factory=DemoLimits)
+    demo_usage_db: Path = Path("/tmp/praxis-demo-usage.db")
+    seed_on_start: bool = False
 
     @classmethod
     def from_env(cls, environ: Mapping[str, str] | None = None) -> Settings:
@@ -95,6 +103,28 @@ class Settings:
         log_level = choice("LOG_LEVEL", "INFO", LOG_LEVELS)
         database_path = Path(get("DATABASE_PATH", "./data/praxis.db"))
 
+        def flag(name: str) -> bool:
+            return get(name).lower() in ("1", "true", "yes", "on")
+
+        def positive(name: str, default: int) -> int:
+            raw = get(name, str(default))
+            if not raw.isdigit() or int(raw) <= 0:
+                problems.append(f"{name} must be a positive whole number")
+                return default
+            return int(raw)
+
+        demo_mode = flag("DEMO_MODE")
+        demo_hash_key = get("DEMO_HASH_KEY")
+        if demo_mode and len(demo_hash_key) < 16:
+            problems.append("DEMO_HASH_KEY must be set (at least 16 characters) with DEMO_MODE")
+        demo_limits = DemoLimits(
+            max_call_s=positive("DEMO_MAX_CALL_S", 300),
+            warn_before_s=positive("DEMO_WARN_BEFORE_S", 60),
+            calls_per_caller=positive("DEMO_CALLS_PER_CALLER", 3),
+            calls_per_day=positive("DEMO_CALLS_PER_DAY", 15),
+            minutes_per_day=positive("DEMO_MINUTES_PER_DAY", 45),
+        )
+
         if problems:
             raise ConfigError("Invalid configuration:\n  - " + "\n  - ".join(problems))
 
@@ -112,6 +142,11 @@ class Settings:
             stt_language_hint=hint,
             log_level=log_level,
             database_path=database_path,
+            demo_mode=demo_mode,
+            demo_hash_key=demo_hash_key,
+            demo_limits=demo_limits,
+            demo_usage_db=Path(get("DEMO_USAGE_DB", "/tmp/praxis-demo-usage.db")),
+            seed_on_start=flag("SEED_ON_START"),
         )
 
 
