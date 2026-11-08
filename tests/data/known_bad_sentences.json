@@ -39,5 +39,8 @@
   "Einen Moment, ich schaue nach einem Termin morgen Nachmittag.": "German in an English call (meta:language; the LLM chose the language before 2026-11-07, agent/call_language.py)",
   "Morgen, Dienstag, 10. November, habe ich folgende Termine am Nachmittag für Sie: um 15 Uhr bei Dr. Brandt, um 15 Uhr bei Dr. Weber oder um 15 Uhr 30 bei Dr. Brandt.": "German in an English call (meta:language; the LLM chose the language before 2026-11-07, agent/call_language.py)",
   "Dafür brauche ich noch Ihr Geburtsdatum.": "German in an English call (meta:language; the LLM chose the language before 2026-11-07, agent/call_language.py)",
-  "Am Donnerstag, 12. November, haben wir um 8 Uhr bei Dr. Brandt, um 8 Uhr bei Dr. Weber und um 8 Uhr 30 bei Dr. Brandt frei.": "German in an English call (meta:language; the LLM chose the language before 2026-11-07, agent/call_language.py)"
+  "Am Donnerstag, 12. November, haben wir um 8 Uhr bei Dr. Brandt, um 8 Uhr bei Dr. Weber und um 8 Uhr 30 bei Dr. Brandt frei.": "German in an English call (meta:language; the LLM chose the language before 2026-11-07, agent/call_language.py)",
+  "Please say yes to confirm.": "telling the caller which word to answer with (meta: demand, 2026-11-08; spoken in earlier live runs before the filter existed)",
+  "Please answer yes or tell me the correct number.": "telling the caller which word to answer with (meta: demand, 2026-11-08; spoken in earlier live runs before the filter existed)",
+  "Bitte antworten Sie mit Ja.": "telling the caller which word to answer with (meta: demand, 2026-11-08; spoken in earlier live runs before the filter existed)"
 }

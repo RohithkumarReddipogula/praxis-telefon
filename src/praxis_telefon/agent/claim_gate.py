@@ -13,7 +13,9 @@ what is known about the call (``FilterContext``) and dropped if it:
   named, i.e. a date the LLM worked out itself (``weekday``),
 - states a practice fact (opening hours, address, parking, ...) that practice_info has
   not backed in this call (``fact:<kind>``; a closed day is also backed by find_slots),
-- asks for another person's date of birth outside a new booking (``privacy``).
+- asks for another person's date of birth outside a new booking (``privacy``),
+- tells the caller which word to answer with ("Bitte sagen Sie Ja oder Nein", "Please
+  answer yes or no", "I need a clear yes"; ``demand``).
 
 A sentence with only a claim is held until the next one: a following confirmation
 question ("Stimmt das so?") makes it a read-back and both are released. A dropped
@@ -44,6 +46,7 @@ from praxis_telefon.agent.claim_check import (
     take_sentences,
 )
 from praxis_telefon.agent.speech_filters import (
+    demands_keyword_answer,
     is_new_or_existing_question,
     mentions_wanted_day,
     meta_reasons,
@@ -158,6 +161,8 @@ def check_sentence(sentence: str, ctx: FilterContext) -> list[str]:
     reasons += [f"meta:{why}" for why in meta_reasons(sentence, ctx.language)]
     if asks_third_party_dob(sentence, ctx):
         reasons.append("privacy")
+    if demands_keyword_answer(sentence):
+        reasons.append("demand")
     if is_new_or_existing_question(sentence) and (
         ctx.intent_asked or any(mentions_wanted_day(t) for t in ctx.caller_texts)
     ):

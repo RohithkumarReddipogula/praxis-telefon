@@ -29,6 +29,7 @@ from livekit.agents import (
 
 from praxis_telefon.agent import call_language, consent
 from praxis_telefon.agent.claim_gate import FilterContext, SentenceFilter, filter_claims
+from praxis_telefon.agent.pending_action import pending_action
 from praxis_telefon.agent.prompts import LANGUAGE_NOTES, TOOL_FILLER, build_instructions
 from praxis_telefon.agent.speech_lock import lock_current_speech
 from praxis_telefon.agent.tool_filler import ToolFiller, said_since_caller
@@ -255,6 +256,7 @@ class Receptionist(Agent):
         ctx = FilterContext.from_chat(chat_ctx, today_sentence(self._service.now()), language)
         filler = ToolFiller(TOOL_FILLER[ctx.language], allowed=not said_since_caller(chat_ctx))
 
+        pending = pending_action(chat_ctx)  # what a natural question should be about
         first = SentenceFilter(ctx, "first")
         stream = Agent.default.llm_node(self, chat_ctx, tools, model_settings)
         async for out in filter_claims(stream, first):
@@ -267,7 +269,9 @@ class Receptionist(Agent):
         retry_ctx = chat_ctx.copy()
         if first.spoken:
             retry_ctx.add_message(role="assistant", content="".join(first.spoken).strip())
-        retry_ctx.add_message(role="system", content=retry_note_for(first.blocked, ctx.language))
+        retry_ctx.add_message(
+            role="system", content=retry_note_for(first.blocked, ctx.language, pending)
+        )
         if first.spoken and not first.spoken[-1][-1:].isspace():
             yield " "  # keep the retry's first word apart from what was already said
         second = SentenceFilter(ctx, "retry")
@@ -282,7 +286,7 @@ class Receptionist(Agent):
             logger.info(json.dumps(record, separators=(",", ":")))
             said = "".join(second.spoken)
             prefix = " " if said and not said[-1:].isspace() else ""
-            yield prefix + fallback_for(reasons, ctx.language)
+            yield prefix + fallback_for(reasons, ctx.language, pending)
 
     def _require_consent(self) -> None:
         """book / move / cancel only after a read-back question and a clear yes

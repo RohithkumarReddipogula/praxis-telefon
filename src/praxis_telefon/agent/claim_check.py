@@ -52,8 +52,9 @@ _SENTENCE_BREAK = re.compile(r"(?<=[.!?])\s+(?=[A-ZÄÖÜ\"„])")
 # "Dr. Weber", "z. B.", and day ordinals like "am 1. Februar" do not end a sentence.
 _NO_BREAK_AFTER = re.compile(r"(?:\b(?:Dr|Nr|ca|bzw|z|B)\.|(?<!\d)\d{1,2}\.)$")
 _CONFIRM_QUESTION = re.compile(
-    r"\b(stimmt das|ist das (so )?(richtig|korrekt)|passt das|soll ich|einverstanden|"
-    r"richtig so|darf ich|is that (right|correct)|shall i|should i)\b.*\?$",
+    r"\b(stimmt das|ist (das|die nummer) (so )?(richtig|korrekt)|passt das|soll ich|"
+    r"einverstanden|richtig so|darf ich|is (that|the) (number )?(right|correct)|shall i|"
+    r"should i)\b.*\?$",
     _I,
 )
 _CONDITIONAL = re.compile(r"\b(wenn|falls|sobald|if|once)\b", _I)

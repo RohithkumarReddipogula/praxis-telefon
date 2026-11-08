@@ -154,6 +154,37 @@ _PRIVACY_NOTE = (
     "nachzusehen, und nenne keine Termine anderer Personen. Für Änderungen am Termin einer "
     "anderen Person biete eine Nachricht für das Praxisteam an."
 )
+# The natural question after a blocked "answer yes or no", by what is pending (see
+# agent/pending_action.py); None: nothing specific is pending.
+DEMAND_QUESTIONS: dict[tuple[str | None, Language], str] = {
+    ("book", "de"): "Soll ich den Termin so eintragen?",
+    ("book", "en"): "Shall I book it like that?",
+    ("move", "de"): "Soll ich den Termin so verschieben?",
+    ("move", "en"): "Shall I move the appointment like that?",
+    ("cancel", "de"): "Soll ich den Termin absagen?",
+    ("cancel", "en"): "Shall I cancel the appointment?",
+    ("callback", "de"): "Ist die Nummer so richtig?",
+    ("callback", "en"): "Is that number correct?",
+    (None, "de"): "Ist das so richtig?",
+    (None, "en"): "Is that correct?",
+}
+
+
+def _demand_note(pending: str | None, language: Language) -> str:
+    read_back = {
+        "callback": "Lies die gespeicherte Rückrufnummer Ziffer für Ziffer vor und ",
+        "book": "Lies Termin, Namen und Geburtsdatum in einem Satz vor und ",
+        "move": "Lies Termin, Namen und Geburtsdatum in einem Satz vor und ",
+        "cancel": "Lies den Termin in einem Satz vor und ",
+    }.get(pending or "", "")
+    return (
+        "WICHTIG: Fordere den Anrufer nie auf, mit Ja oder Nein oder einem bestimmten Wort zu "
+        "antworten, und sage nicht, dass du ein klares Ja brauchst. "
+        f"{read_back}{'f' if read_back else 'F'}rage natürlich, zum Beispiel: "
+        f"{DEMAND_QUESTIONS[(pending, language)]}"
+    )
+
+
 _INTENT_NOTE = (
     "WICHTIG: Frage nicht, ob es um einen neuen oder einen bestehenden Termin geht. "
     "Spricht der Anrufer nicht ausdrücklich von seinem eigenen, schon vereinbarten Termin, "
@@ -174,7 +205,9 @@ GENERIC_FALLBACK: dict[Language, str] = {
 }
 
 
-def retry_note_for(reasons: list[str], language: Language = "de") -> str:
+def retry_note_for(
+    reasons: list[str], language: Language = "de", pending: str | None = None
+) -> str:
     """One system note for the single retry, covering every reason that was blocked."""
     claims = [r.split(":", 1)[1] for r in reasons if r.startswith("claim:")]
     notes = [retry_note(claims)] if claims else []
@@ -190,14 +223,18 @@ def retry_note_for(reasons: list[str], language: Language = "de") -> str:
         notes.append(_FACT_NOTE)
     if "privacy" in reasons:
         notes.append(_PRIVACY_NOTE)
+    if "demand" in reasons:
+        notes.append(_demand_note(pending, language))
     return " ".join(notes)
 
 
-def fallback_for(reasons: list[str], language: Language) -> str:
+def fallback_for(reasons: list[str], language: Language, pending: str | None = None) -> str:
     """Fixed sentence when the retry was blocked too: claims first, then the question."""
     for reason in reasons:
         if reason.startswith("claim:"):
             return NOT_DONE_MESSAGES[(reason.split(":", 1)[1], language)]
     if "intent" in reasons:
         return INTENT_FALLBACK[language]
+    if "demand" in reasons:
+        return DEMAND_QUESTIONS[(pending, language)]
     return GENERIC_FALLBACK[language]

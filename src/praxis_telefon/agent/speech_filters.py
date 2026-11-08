@@ -282,6 +282,28 @@ def practice_facts(sentence: str) -> set[str]:
     return {family for family, pattern in _PRACTICE_FACTS.items() if pattern.search(s)}
 
 
+# --- telling the caller which word to answer with -----------------------------------------
+
+# Cloud browser test and booking harness run 2026-11-08: after a consent refusal the agent
+# said "Bitte sagen Sie Ja oder Nein", "Please answer yes or no", "I need a clear yes
+# before I book", "ich brauche noch Ihr ausdrückliches Ja". Robotic: it asks naturally.
+_ANSWER_DEMAND = re.compile(
+    r"\b(?:sagen|antworten)\s+sie\s+(?:bitte\s+)?(?:einfach\s+|nur\s+)?(?:mit\s+)?(?:ja|nein)\b"
+    r"|\bja\s+oder\s+nein\b"
+    r"|\b(?:answer|reply|respond|say)\s+(?:with\s+)?(?:a\s+)?(?:simple\s+|clear\s+)?"
+    r"(?:yes|no)\b"
+    r"|\byes\s+or\s+no\b"
+    r"|\bbrauche\b.{0,30}\b(?:ausdrückliches?|eindeutiges?|klares?)\s+ja\b"
+    r"|\bneeds?\b.{0,30}\b(?:clear|explicit|definite)\s+(?:yes|answer|confirmation)\b",
+    _I,
+)
+
+
+def demands_keyword_answer(sentence: str) -> bool:
+    """The sentence tells the caller to answer with yes / no or says it needs a clear yes."""
+    return bool(_ANSWER_DEMAND.search(sentence))
+
+
 # --- new or existing appointment ---------------------------------------------------------
 
 # "einen neuen Termin, oder geht es um einen bestehenden", "neuen oder bestehenden Termin"
