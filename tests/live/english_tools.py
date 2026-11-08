@@ -55,6 +55,7 @@ class EnglishToolDocsReceptionist(TimedReceptionist):
             patient_name: Patient's first and last name.
             date_of_birth: Patient's date of birth, ISO format YYYY-MM-DD.
         """
+        self._require_consent()
         return _run(lambda: self._service.book(slot_id, patient_name, date_of_birth))
 
     @function_tool
@@ -91,6 +92,7 @@ class EnglishToolDocsReceptionist(TimedReceptionist):
             booking_id: booking_id from find_booking or book in this call.
             new_slot_id: slot_id from find_slots in this call.
         """
+        self._require_consent()
         return _run(lambda: self._service.move(booking_id, new_slot_id))
 
     @function_tool
@@ -102,6 +104,7 @@ class EnglishToolDocsReceptionist(TimedReceptionist):
         Args:
             booking_id: booking_id from find_booking or book in this call.
         """
+        self._require_consent()
         return _run(lambda: self._service.cancel(booking_id))
 
     @function_tool

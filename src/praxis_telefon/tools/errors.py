@@ -88,6 +88,18 @@ class InvalidReasonCategory(ToolFailure):
     message = "Bitte eine der vorgegebenen Kategorien für das Anliegen wählen."
 
 
+class ConsentMissing(ToolFailure):
+    # Cloud browser test 2026-11-08: book was called without a read-back and a yes; the
+    # agent then said "Bitte sagen Sie Ja oder Nein", which sounded robotic.
+    code = "consent_missing"
+    message = (
+        "Noch keine Bestätigung erkannt. Lies Termin, Ärztin oder Arzt, Namen und "
+        "Geburtsdatum in einem Satz vor und frage natürlich, ob es so stimmt. Fordere den "
+        "Anrufer nie auf, mit einem bestimmten Wort zu antworten; rufe das Werkzeug nach "
+        "seiner Zustimmung auf."
+    )
+
+
 class CallbackNumberMismatch(ToolFailure):
     # M4 harness rerun 2026-11-07: the LLM turned the caller's spoken digits into a wrong
     # number; the caller heard the right one read back, the team got the wrong one.

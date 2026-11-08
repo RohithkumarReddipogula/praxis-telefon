@@ -27,7 +27,7 @@ from livekit.agents import (
     stt,
 )
 
-from praxis_telefon.agent import call_language
+from praxis_telefon.agent import call_language, consent
 from praxis_telefon.agent.claim_gate import FilterContext, SentenceFilter, filter_claims
 from praxis_telefon.agent.prompts import LANGUAGE_NOTES, TOOL_FILLER, build_instructions
 from praxis_telefon.agent.speech_lock import lock_current_speech
@@ -51,7 +51,7 @@ from praxis_telefon.safety.messages import (
     retry_note_for,
 )
 from praxis_telefon.safety.phrases import Language
-from praxis_telefon.tools.errors import ToolFailure
+from praxis_telefon.tools.errors import ConsentMissing, ToolFailure
 from praxis_telefon.tools.formatting import today_sentence
 
 logger = logging.getLogger("praxis_telefon.safety")
@@ -284,6 +284,12 @@ class Receptionist(Agent):
             prefix = " " if said and not said[-1:].isspace() else ""
             yield prefix + fallback_for(reasons, ctx.language)
 
+    def _require_consent(self) -> None:
+        """book / move / cancel only after a read-back question and a clear yes
+        (agent/consent.py; bug: cloud browser test 2026-11-08)."""
+        if not consent.confirmed(self.chat_ctx):
+            raise ToolError(f"{ConsentMissing.code}: {ConsentMissing.message}")
+
     # --- tools ------------------------------------------------------------------------
 
     @function_tool
@@ -321,6 +327,7 @@ class Receptionist(Agent):
             patient_name: Patient's first and last name.
             date_of_birth: Patient's date of birth, ISO format YYYY-MM-DD.
         """
+        self._require_consent()
         return _run(lambda: self._service.book(slot_id, patient_name, date_of_birth))
 
     @function_tool
@@ -357,6 +364,7 @@ class Receptionist(Agent):
             booking_id: booking_id from find_booking or book in this call.
             new_slot_id: slot_id from find_slots in this call.
         """
+        self._require_consent()
         return _run(lambda: self._service.move(booking_id, new_slot_id))
 
     @function_tool
@@ -368,6 +376,7 @@ class Receptionist(Agent):
         Args:
             booking_id: booking_id from find_booking or book in this call.
         """
+        self._require_consent()
         return _run(lambda: self._service.cancel(booking_id))
 
     @function_tool
