@@ -72,6 +72,7 @@ class CallerState:
     corrected: bool = False
     intent_asked: int = 0
     identity_asked: int = 0
+    answered_slots: int = -1  # the find_slots result the caller last chose from
 
 
 def reply(
@@ -101,15 +102,43 @@ def reply(
             state.changed_mind = True
             return say("other_day")
         return say("first_slot")
-    time_q, doctor_q = bool(_ASKS_TIME.search(agent_text)), bool(_ASKS_DOCTOR.search(agent_text))
-    if asks and (time_q or doctor_q):
-        return say("any_both" if time_q and doctor_q else "any_time" if time_q else "any_doctor")
+    # A read-back names a time and a doctor; it is a confirmation, not a time question
+    # (harness run 2026-11-08, date_tomorrow_afternoon_en[3]).
     if _CONFIRM.search(agent_text):
         if behaviour == "correct_readback" and not state.corrected:
             state.corrected = True
             return say("correct")
         return say("yes")
+    time_q, doctor_q = bool(_ASKS_TIME.search(agent_text)), bool(_ASKS_DOCTOR.search(agent_text))
+    if asks and (time_q or doctor_q):
+        return say("any_both" if time_q and doctor_q else "any_time" if time_q else "any_doctor")
     if asks and _ASKS_IDENTITY.search(agent_text):
         state.identity_asked += 1
         return say("identity")
     return say("yes")
+
+
+def reply_in_call(
+    behaviour: str,
+    agent_text: str,
+    state: CallerState,
+    *,
+    identity: str,
+    language: str,
+    slots_index: int,
+) -> str:
+    """``reply`` with the slot offer tracked: an offer counts as answered only once the
+    caller chose a slot (M4 rerun 2026-11-08, confused_caller_books: a "Wie bitte?" used
+    up the offer, and later choice questions got "yes")."""
+    line = reply(
+        behaviour,
+        agent_text,
+        state,
+        identity=identity,
+        language=language,
+        slots=slots_index > state.answered_slots,
+    )
+    lang = language if language in ("de", "en") else "de"
+    if line == REPLIES["first_slot"][lang]:
+        state.answered_slots = slots_index
+    return line

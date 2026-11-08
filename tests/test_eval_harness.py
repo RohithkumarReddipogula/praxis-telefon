@@ -474,3 +474,101 @@ def test_read_back_must_say_the_saved_number() -> None:
         messages=[{"number": "03212345456", "reasons": ["callback"]}],
     )
     assert checks.evaluate(s, wrong)["task_success"] is False
+
+
+# --- steps and the confused caller (M4 rerun 2026-11-08) ---------------------------------
+
+
+def test_scenario_steps_each_have_lines_and_until() -> None:
+    # book_move_cancel_one_call failed 2/5: its five lines were spoken whatever the agent
+    # said, so a read-back or a doctor question put the script out of step.
+    s = scenario.parse(
+        {
+            "id": "s",
+            "group": "appointments",
+            "lang": "de",
+            "caller": {
+                "steps": [
+                    {"lines": ["Hallo, {max}. Dienstag vormittags."], "until": "book"},
+                    {
+                        "lines": ["Bitte auf Mittwoch verschieben."],
+                        "until": "move_booking",
+                        "max_replies": 4,
+                    },
+                ]
+            },
+            "expect": {},
+        }
+    )
+    steps = s.caller.steps
+    assert [st.until for st in steps] == [("book",), ("move_booking",)]
+    assert steps[1].max_replies == 4 and "Max Mustermann" in steps[0].lines[0]
+
+
+def test_single_step_scenarios_still_work() -> None:
+    s = scenario.parse(
+        {
+            "id": "s",
+            "group": "faq",
+            "lang": "de",
+            "caller": {"lines": ["Hallo."], "until": "book"},
+            "expect": {},
+        }
+    )
+    assert len(s.caller.steps) == 1 and s.caller.steps[0].until == ("book",)
+
+
+def test_book_move_cancel_uses_steps() -> None:
+    s = next(x for x in scenario.load_all(SCENARIOS) if x.id == "book_move_cancel_one_call")
+    assert [st.until for st in s.caller.steps] == [
+        ("book",),
+        ("move_booking",),
+        ("cancel_booking",),
+    ]
+
+
+def test_confused_caller_still_picks_a_slot_after_its_pardon() -> None:
+    # confused_caller_books: the pardon used up the slot offer, so later choice questions
+    # got "yes" and the agent asked several times.
+    state = callers.CallerState()
+    offer = "Um 8 Uhr bei Dr. Brandt oder um 8 Uhr 30 bei Dr. Weber. Welcher passt Ihnen?"
+    first = callers.reply_in_call(
+        "confused", offer, state, identity="Max", language="de", slots_index=3
+    )
+    assert "Wie bitte" in first
+    again = "Welchen der Termine möchten Sie: um 8 Uhr oder um 8 Uhr 30?"
+    assert (
+        callers.reply_in_call(
+            "confused", again, state, identity="Max", language="de", slots_index=3
+        )
+        == "Der erste Termin passt mir."
+    )
+    # Once chosen, the same offer is not answered with a slot again.
+    assert (
+        callers.reply_in_call(
+            "confused", again, state, identity="Max", language="de", slots_index=3
+        )
+        == "Ja, das stimmt so."
+    )
+
+
+def test_caller_answers_a_read_back_with_yes_even_if_it_names_a_time() -> None:
+    # Harness run 2026-11-08 (date_tomorrow_afternoon_en[3]): the read-back "... at 3
+    # o'clock in the afternoon with Dr. Brandt ... Shall I book that?" got "Any time is
+    # fine." because the time question was checked before the confirmation question.
+    state = callers.CallerState()
+    q = (
+        "Just to confirm: Tuesday at 3 o'clock in the afternoon with Dr. Brandt, for "
+        "Max Mustermann. Shall I book that?"
+    )
+    assert callers.reply("cooperative", q, state, identity="Max", language="en") == (
+        "Yes, that's right."
+    )
+    # A real time question still gets its answer.
+    assert callers.reply(
+        "cooperative",
+        "Would you prefer the morning or the afternoon?",
+        callers.CallerState(),
+        identity="Max",
+        language="en",
+    ) == ("Any time is fine.")

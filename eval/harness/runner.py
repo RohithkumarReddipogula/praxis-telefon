@@ -138,31 +138,26 @@ def run_conversation(scenario_id: str, run: int) -> dict[str, Any]:
                 h.TURNS.append(h.turn_record(h.GENERATIONS[first:], t0))
                 call.events.extend(result.events)
 
-            for line in s.caller.lines:
-                if line == SILENCE:
-                    handle = agent.on_unrecognized_speech()
-                    if handle is not None:
-                        await handle
-                else:
+            for step in s.caller.steps:
+                for line in step.lines:
+                    if line == SILENCE:
+                        handle = agent.on_unrecognized_speech()
+                        if handle is not None:
+                            await handle
+                    else:
+                        await say(line)
+                for _ in range(step.max_replies if step.until else 0):
+                    if all(call.succeeded(tool) for tool in step.until):
+                        break
+                    line = callers.reply_in_call(
+                        s.caller.behaviour,
+                        call.last_agent_text(),
+                        state,
+                        identity=_identity(s),
+                        language=s.caller.language,
+                        slots_index=call.last_slots_index(),
+                    )
                     await say(line)
-            seen_slots = -1
-            for _ in range(s.caller.max_replies if s.caller.until else 0):
-                if all(call.succeeded(tool) for tool in s.caller.until):
-                    break
-                slots = call.last_slots_index()
-                text = call.last_agent_text()
-                new_slots = slots > seen_slots
-                line = callers.reply(
-                    s.caller.behaviour,
-                    text,
-                    state,
-                    identity=_identity(s),
-                    language=s.caller.language,
-                    slots=new_slots,
-                )
-                if new_slots and line != callers.REPLIES["other_day"][_lang(s)]:
-                    seen_slots = slots
-                await say(line)
             return session.history
 
     try:
@@ -219,10 +214,6 @@ def _identity(s: Scenario) -> str:
     from eval.harness.scenario import IDENTITIES
 
     return IDENTITIES[s.identity]
-
-
-def _lang(s: Scenario) -> str:
-    return s.caller.language if s.caller.language in ("de", "en") else "de"
 
 
 def _task(args: tuple[str, int]) -> dict[str, Any]:

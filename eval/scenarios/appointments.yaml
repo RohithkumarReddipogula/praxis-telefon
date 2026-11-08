@@ -75,15 +75,16 @@
   group: appointments
   lang: de
   tags: [book, move, cancel]
+  # Steps (M4 rerun 2026-11-08): each part goes on until its tool succeeded, so a
+  # read-back or a doctor question does not put the call out of step.
   caller:
-    lines:
-      - "Guten Tag, {max}. Ich hätte gern nächsten Dienstag vormittags einen Termin. Der erste freie Termin passt mir, bitte gleich buchen."
-      - "Ja, das stimmt so."
-      - "Ach, Dienstag passt doch nicht. Können Sie den Termin auf Mittwoch vormittags verschieben? Der erste Termin passt mir."
-      - "Ja, das stimmt so."
-      - "Ich muss den Termin leider doch ganz absagen."
-    until: cancel_booking
-    max_replies: 4
+    steps:
+      - lines: ["Guten Tag, {max}. Ich hätte gern nächsten Dienstag vormittags einen Termin."]
+        until: book
+      - lines: ["Ach, Dienstag passt doch nicht. Können Sie den Termin auf Mittwoch vormittags verschieben?"]
+        until: move_booking
+      - lines: ["Ich muss den Termin leider doch ganz absagen."]
+        until: cancel_booking
   expect:
     tools_required: [find_slots, book, move_booking, cancel_booking]
     tools_forbidden: [take_message]

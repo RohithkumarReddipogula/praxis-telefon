@@ -59,12 +59,29 @@ class ScenarioError(ValueError):
 
 
 @dataclass(frozen=True)
+class Step:
+    """Caller lines, then answers (at most max_replies) until every ``until`` tool has
+    succeeded. Steps keep a multi-part call in line with the agent (M4 rerun 2026-11-08:
+    fixed lines spoken whatever the agent said got out of step after a read-back)."""
+
+    lines: tuple[str, ...]
+    until: tuple[str, ...] = ()
+    max_replies: int = 6
+
+
+@dataclass(frozen=True)
 class Caller:
     lines: tuple[str, ...]
     behaviour: str = "cooperative"
     language: str = "de"
     until: tuple[str, ...] = ()  # tools whose success (all of them) ends the call
     max_replies: int = 6
+    step_list: tuple[Step, ...] = ()
+
+    @property
+    def steps(self) -> tuple[Step, ...]:
+        """The call's steps; a scenario without ``steps`` is one step."""
+        return self.step_list or (Step(self.lines, self.until, self.max_replies),)
 
 
 @dataclass(frozen=True)
@@ -91,6 +108,10 @@ def _fill(text: str) -> str:
         raise ScenarioError(f"unknown placeholder {e}") from None
 
 
+def _line(line: str) -> str:
+    return line if line == SILENCE else _fill(line)
+
+
 def _until(value: Any) -> tuple[str, ...]:
     if value is None:
         return ()
@@ -100,9 +121,10 @@ def _until(value: Any) -> tuple[str, ...]:
 def parse(data: dict[str, Any]) -> Scenario:
     sid = data.get("id", "?")
     caller = data.get("caller") or {}
-    lines = caller.get("lines")
+    raw_steps = caller.get("steps") or []
+    lines = caller.get("lines") or [line for st in raw_steps for line in st.get("lines", [])]
     if not lines:
-        raise ScenarioError(f"{sid}: caller.lines is missing")
+        raise ScenarioError(f"{sid}: caller.lines (or steps with lines) is missing")
     unknown = set(data.get("expect", {})) - EXPECTATIONS
     if unknown:
         raise ScenarioError(f"{sid}: unknown expectation {sorted(unknown)}")
@@ -120,11 +142,19 @@ def parse(data: dict[str, Any]) -> Scenario:
         group=data["group"],
         lang=data["lang"],
         caller=Caller(
-            lines=tuple(line if line == SILENCE else _fill(line) for line in lines),
+            lines=tuple(_line(line) for line in lines),
             behaviour=behaviour,
             language=caller.get("language", data["lang"]),
             until=_until(caller.get("until")),
             max_replies=int(caller.get("max_replies", 6)),
+            step_list=tuple(
+                Step(
+                    tuple(_line(line) for line in st.get("lines", [])),
+                    _until(st.get("until")),
+                    int(st.get("max_replies", 6)),
+                )
+                for st in raw_steps
+            ),
         ),
         expect=dict(data.get("expect", {})),
         tags=tuple(data.get("tags", ())),
