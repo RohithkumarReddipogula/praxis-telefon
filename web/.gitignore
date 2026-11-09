@@ -1,0 +1,4 @@
+node_modules/
+public/livekit-client.js
+*.db
+*.db-*

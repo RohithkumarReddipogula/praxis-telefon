@@ -1,0 +1,19 @@
+{
+  "name": "praxis-telefon-web",
+  "private": true,
+  "type": "module",
+  "description": "Public web demo: one page and a token endpoint for the Praxis-Telefon agent.",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test": "node --test \"test/**/*.test.ts\"",
+    "start": "node server.ts",
+    "build": "node scripts/build.ts"
+  },
+  "dependencies": {
+    "esbuild": "^0.28.2",
+    "livekit-client": "^2.23.0",
+    "livekit-server-sdk": "^2.19.2"
+  }
+}
