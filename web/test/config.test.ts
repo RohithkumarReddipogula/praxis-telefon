@@ -49,3 +49,9 @@ test("numeric limits must be positive whole numbers", () => {
   assert.throws(() => loadConfig({ ...ENV, WEB_CALL_SECONDS: "abc" }), /WEB_CALL_SECONDS/);
   assert.equal(loadConfig({ ...ENV, WEB_MINUTES_PER_DAY: "10" }).webMinutesPerDay, 10);
 });
+
+test("the port comes from PORT (Railway assigns it), with 8080 as the fallback", () => {
+  assert.equal(loadConfig({ ...ENV, PORT: "4321" }).port, 4321);
+  assert.equal(loadConfig(ENV).port, 8080);
+  assert.throws(() => loadConfig({ ...ENV, PORT: "abc" }), /PORT/);
+});

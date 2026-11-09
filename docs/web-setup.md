@@ -10,10 +10,14 @@ Never paste secret values into the chat or into a file in the repo.
       are needed on Railway.
 
 ## 2. Railway service
-- [ ] New project, region **EU West (Amsterdam)**, deploy from this GitHub repo, **root
-      directory `web`**.
-- [ ] Build command `npm ci && npm run build`; start command `npm start` (Node 24+; set
-      `NODE_VERSION=24` if the builder picks an older one).
+- [ ] New project, region **EU West (Amsterdam)**, deploy from this GitHub repo.
+- [ ] Service Settings -> Source -> **Root Directory: `web`**. Railway then finds
+      `web/Dockerfile` (the build log says "Using detected Dockerfile!"; if not, add the
+      variable `RAILWAY_DOCKERFILE_PATH=Dockerfile`). The repository's root Dockerfile is the
+      Python agent for LiveKit Cloud and is not used here.
+- [ ] Leave **Build Command and Start Command empty**: the Dockerfile builds the page
+      (`npm ci`, `npm run build`) and starts `node server.ts` on Node 24.
+- [ ] Do not set `PORT`: Railway assigns it and the server reads it (fallback 8080).
 - [ ] Add a **volume** mounted at `/data` (SQLite file `/data/usage.db`).
 - [ ] Generate a public domain (Settings -> Networking). Health check path `/health`.
 - [ ] Usage limits (Settings -> Usage): soft limit about 5 USD, hard limit about 10 USD
