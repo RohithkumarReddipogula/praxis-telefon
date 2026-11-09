@@ -223,8 +223,8 @@ Open for M4:
 - **FAQ gaps:** practice policies outside the FAQ ("keine Befunde telefonisch") are not
   caught by the fact check; a new entry or filter family if they recur.
 - **Late transcripts:** keep reading `late_transcript_summary`; the 5 % rule applies only
-  after at least 40 turns of data. So far 1 of 20 turns (three cloud browser calls 2026-11-08,
-  0.047 s after the commit, no visible effect); `min_delay` stays 0.4 s.
+  after at least 40 turns of data. So far 2 of 43 turns = 4.7 % (cloud calls 2026-11-08 and
+  -09; 0.047 s and 0.056 s after the commit, no visible effect); `min_delay` stays 0.4 s.
 - **Real end-to-end latency:** a longer console session; read `e2e_s`, `is_filler` and
   `since_caller_s` from the turn log.
 - The user's local `data/praxis.db` must be reseeded for 28 days (`... db.seed --reset`).

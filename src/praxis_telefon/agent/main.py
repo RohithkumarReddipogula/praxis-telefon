@@ -265,14 +265,27 @@ async def entrypoint(ctx: JobContext) -> None:
 
 
 async def run_demo_call(ctx: JobContext, session: AgentSession[Any], settings: Settings) -> None:
-    """Public demo (agent/demo.py): limits per caller and day, the demo greeting, and
-    the call ended after its maximum. A refused call hears a fixed message, no LLM."""
-    participant = await ctx.wait_for_participant()
-    caller = demo.caller_hash(participant.attributes.get("sip.phoneNumber"), settings.demo_hash_key)
+    """Public demo (agent/demo.py): limits per channel (phone: per caller and day; browser:
+    minutes per day and month), the demo greeting, and the call ended after its maximum. A
+    refused call gets the busy signal for the web page, a fixed message and a hang-up (no
+    LLM); a voice (TTS) that fails for good does the same without speaking."""
+    try:
+        participant = await ctx.wait_for_participant()
+    except RuntimeError:  # "room disconnected while waiting for participant": a visitor who
+        # left (closed the tab, console reconnect) before joining; no call, no minutes
+        logger.info(json.dumps({"event": "demo_no_participant"}, separators=(",", ":")))
+        return
+    channel = demo.channel_of(participant.attributes)
+    caller = (
+        None
+        if channel == "web"
+        else demo.caller_hash(participant.attributes.get("sip.phoneNumber"), settings.demo_hash_key)
+    )
     limiter = demo.CallLimiter(settings.demo_usage_db, settings.demo_limits)
-    decision = limiter.start(caller, practice_now())
+    decision = limiter.start(caller, practice_now(), channel)
     record = {
         "event": "demo_call",
+        "channel": channel,
         "caller": caller or "withheld",
         "allowed": decision.allowed,
         "reason": decision.reason,
@@ -280,10 +293,10 @@ async def run_demo_call(ctx: JobContext, session: AgentSession[Any], settings: S
     }
     logger.info(json.dumps(record, separators=(",", ":")))  # keyed hash only, never the number
     if not decision.allowed:
-        await session.say(demo.MESSAGES[decision.reason], allow_interruptions=False)
-        await ctx.delete_room()
+        await demo.tell_busy(ctx, session, decision.reason)
         return
 
+    demo.guard_tts(session, demo.busy_task(ctx, session, "tts_unavailable", speak=False))
     started = asyncio.get_running_loop().time()
 
     async def end_after_limit() -> None:

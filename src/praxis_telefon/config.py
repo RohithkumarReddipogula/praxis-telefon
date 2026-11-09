@@ -123,6 +123,8 @@ class Settings:
             calls_per_caller=positive("DEMO_CALLS_PER_CALLER", 3),
             calls_per_day=positive("DEMO_CALLS_PER_DAY", 15),
             minutes_per_day=positive("DEMO_MINUTES_PER_DAY", 45),
+            web_minutes_per_day=positive("DEMO_WEB_MINUTES_PER_DAY", 20),
+            web_minutes_per_month=positive("DEMO_WEB_MINUTES_PER_MONTH", 60),
         )
 
         if problems:
