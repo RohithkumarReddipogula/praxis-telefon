@@ -1,11 +1,189 @@
-:root { color-scheme: light dark; --bg:#fff; --fg:#1b1f23; --accent:#0b6e4f; --muted:#5b6770; }
-@media (prefers-color-scheme: dark) { :root { --bg:#14181c; --fg:#e8ecef; --accent:#3ecf9a; --muted:#9aa5ad; } }
-body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 system-ui, sans-serif; }
-main { max-width:40rem; margin:0 auto; padding:1.5rem 16px 3rem; }
-h1 { font-size:1.5rem; } h2 { font-size:1.05rem; }
-#notice { border:1px solid var(--muted); border-radius:8px; padding:0 1rem; }
-button { font:inherit; padding:.7rem 1.1rem; border-radius:8px; border:1px solid var(--accent);
-  background:var(--accent); color:var(--bg); cursor:pointer; margin:.5rem 0; }
-button:disabled { opacity:.45; cursor:not-allowed; }
-#lang { float:right; background:none; color:var(--accent); }
-#status { font-weight:600; } #timer { color:var(--muted); }
+/* High-Tech Medical Clinic Theme */
+:root {
+  --bg: #f0f4f8; /* Light clinical background */
+  --surface: #ffffff;
+  --primary: #0284c7; /* Medical Blue */
+  --primary-glow: rgba(2, 132, 199, 0.2);
+  --secondary: #0ea5e9;
+  --text: #1e293b;
+  --text-muted: #64748b;
+  --border: #e2e8f0;
+  --success: #10b981;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: var(--bg);
+  background-image: 
+    radial-gradient(at 0% 0%, hsla(203, 100%, 95%, 1) 0, transparent 50%), 
+    radial-gradient(at 100% 0%, hsla(186, 100%, 94%, 1) 0, transparent 50%);
+  color: var(--text);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+main {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 3rem;
+  max-width: 600px;
+  width: 90%;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.05), 0 20px 40px -5px rgba(0, 0, 0, 0.02);
+  position: relative;
+  text-align: center;
+}
+
+/* The Medical Cross Icon */
+.medical-icon {
+  width: 64px;
+  height: 64px;
+  background: var(--primary);
+  border-radius: 16px;
+  margin: 0 auto 1.5rem auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 8px 20px var(--primary-glow);
+  position: relative;
+}
+
+.medical-icon::before, .medical-icon::after {
+  content: '';
+  position: absolute;
+  background: white;
+  border-radius: 4px;
+}
+
+/* The Cross shape */
+.medical-icon::before {
+  width: 12px;
+  height: 36px;
+}
+.medical-icon::after {
+  width: 36px;
+  height: 12px;
+}
+
+/* Language Toggle */
+#lang {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+#lang:hover { background: #e2e8f0; color: var(--text); }
+
+/* Typography */
+h1 {
+  font-size: 2rem;
+  font-weight: 800;
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+  color: #0f172a;
+  letter-spacing: -0.025em;
+}
+
+#intro {
+  color: var(--text-muted);
+  font-size: 1.05rem;
+  line-height: 1.6;
+  margin-bottom: 2rem;
+}
+
+/* Notice Box - Like a Patient Consent Form */
+#notice {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--primary);
+  border-radius: 8px;
+  padding: 1.5rem;
+  text-align: left;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 2rem;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+#notice-title { 
+  font-size: 0.95rem; 
+  color: var(--text); 
+  margin-top: 0; 
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+#notice-list { padding-left: 1.2rem; margin: 0; }
+#notice-list li { margin-bottom: 0.5rem; }
+
+/* The Start Button - The Check-in Button */
+#start {
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+  border: none;
+  padding: 1.2rem 2rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px var(--primary-glow);
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+#start:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px var(--primary-glow);
+  background: linear-gradient(135deg, #0270a8, #0284c7);
+}
+
+#start:disabled {
+  background: #e2e8f0;
+  color: #94a3b8;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Captcha */
+#captcha { display: flex; justify-content: center; margin-top: 1rem; }
+
+/* Status */
+#status {
+  margin-top: 1.5rem;
+  font-size: 0.95rem;
+  color: var(--success);
+  font-weight: 600;
+  min-height: 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Timer */
+#timer {
+  font-family: 'DM Mono', monospace;
+  font-size: 1.2rem;
+  color: var(--primary);
+  margin-top: 1rem;
+  font-weight: 600;
+}
