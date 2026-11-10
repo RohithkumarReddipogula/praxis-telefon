@@ -1,78 +1,104 @@
-// The page. livekit-client is bundled to /livekit-client.js by `npm run build` (needs
-// `npm install`). Flow: notice -> captcha -> token -> connect -> agent greets -> live.
-import { Room, RoomEvent, Track } from "/livekit-client.js";
-import { AGENT_TIMEOUT_MS, FINAL_STATES, INITIAL, messageKey, next } from "/state.js";
-import { notice, text } from "/texts.js";
+// --- Generative AI Face Visualizer ---
+const canvas = document.getElementById('ai-face');
+const ctx = canvas.getContext('2d');
+let audioContext;
+let analyser;
+let dataArray;
+let isSpeaking = false;
 
-const $ = (id) => document.getElementById(id);
-let lang = (navigator.language || "de").startsWith("en") ? "en" : "de";
-let state = INITIAL;
-let config;
-let captchaToken = "";
-let room;
-let timer;
+// Resize canvas for high DPI screens
+function resizeCanvas() {
+    const size = canvas.clientWidth;
+    canvas.width = size * 2;
+    canvas.height = size * 2;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
 
-function render() {
-  document.documentElement.lang = lang;
-  $("title").textContent = text(lang, "title");
-  $("intro").textContent = text(lang, "intro");
-  $("notice-title").textContent = text(lang, "notice_title");
-  $("notice-list").replaceChildren(...notice(lang, config).map((line) => Object.assign(document.createElement("li"), { textContent: line })));
-  $("lang").textContent = text(lang, "switch_language");
-  $("start").textContent = text(lang, "consent_button");
-  $("status").textContent = text(lang, messageKey(state));
-  $("start").disabled = state !== "ready";
-  $("start").hidden = state !== "notice" && state !== "ready";
+// Setup Audio Context (call this when the user clicks Start)
+async function setupAudioVisualizer(stream) {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = audioContext.createAnalyser();
+    analyser.fftSize = 256;
+    
+    const source = audioContext.createMediaStreamSource(stream);
+    source.connect(analyser);
+    
+    dataArray = new Uint8Array(analyser.frequencyBinCount);
+    drawFace();
 }
 
-function dispatch(event) {
-  state = next(state, event);
-  clearTimeout(timer);
-  if (state === "waiting_agent") timer = setTimeout(() => dispatch("agent_timeout"), AGENT_TIMEOUT_MS);
-  if (FINAL_STATES.includes(state) && room) room.disconnect();
-  render();
+// Draw the face loop
+function drawFace() {
+    requestAnimationFrame(drawFace);
+    
+    const width = canvas.width;
+    const height = canvas.height;
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const radius = Math.min(width, height) / 4; // Base radius
+
+    ctx.clearRect(0, 0, width, height);
+
+    // Get audio data if available
+    let volume = 0;
+    if (analyser && dataArray) {
+        analyser.getByteFrequencyData(dataArray);
+        // Calculate average volume
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+        volume = sum / dataArray.length;
+    }
+
+    // Dynamic radius based on volume (makes the face "breathe" when speaking)
+    const dynamicRadius = radius + (volume * 0.8);
+
+    // Draw the main core (The AI Eye/Face)
+    const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, dynamicRadius);
+    gradient.addColorStop(0, '#ffffff');
+    gradient.addColorStop(0.5, '#00f0ff'); // Cyber Cyan
+    gradient.addColorStop(1, 'rgba(112, 0, 255, 0)'); // Fade to purple/transparent
+
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, dynamicRadius, 0, Math.PI * 2);
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
+    // Draw the inner neural network lines
+    if (dataArray) {
+        ctx.lineWidth = 2;
+        for (let i = 0; i < dataArray.length; i += 4) {
+            const angle = (i / dataArray.length) * Math.PI * 2;
+            const value = dataArray[i];
+            const lineLength = dynamicRadius + (value * 0.5);
+            
+            const x = centerX + Math.cos(angle) * lineLength;
+            const y = centerY + Math.sin(angle) * lineLength;
+            
+            ctx.beginPath();
+            ctx.moveTo(centerX + Math.cos(angle) * (dynamicRadius - 10), centerY + Math.sin(angle) * (dynamicRadius - 10));
+            ctx.lineTo(x, y);
+            ctx.strokeStyle = `rgba(0, 240, 255, ${value / 255})`; // Glow based on volume
+            ctx.stroke();
+        }
+    }
 }
 
-async function start() {
-  dispatch("start");
-  let res;
-  try {
-    res = await fetch("/api/token", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ turnstile_token: captchaToken, lang }),
-    });
-  } catch { return dispatch("token_error"); }
-  if (res.status === 503) return dispatch("token_busy");
-  if (res.status === 429) return dispatch("token_visitor_limit");
-  if (res.status === 403) return dispatch("token_captcha_failed");
-  if (res.status !== 201) return dispatch("token_error");
-  const { server_url, participant_token } = await res.json();
-  dispatch("token_ok");
-  room = new Room();
-  room.on(RoomEvent.TrackSubscribed, (track) => {
-    if (track.kind === Track.Kind.Audio) { $("status").after(track.attach()); dispatch("agent_audio"); }
-  });
-  room.on(RoomEvent.ParticipantAttributesChanged, (attrs) => {
-    if (attrs.demo_status === "busy") dispatch("agent_busy"); // set by the agent before it speaks
-  });
-  room.on(RoomEvent.Disconnected, () => dispatch("disconnected"));
-  try {
-    await room.connect(server_url, participant_token);
-    await room.localParticipant.setMicrophoneEnabled(true);
-  } catch (error) {
-    return dispatch(error?.name === "NotAllowedError" ? "mic_denied" : "connect_failed");
-  }
-  dispatch("connected");
-}
+// Hook this into your existing "Start" button logic
+// In your current LiveKit connection code, after the microphone is enabled:
+// const micStream = await room.localParticipant.setMicrophoneEnabled(true);
+// setupAudioVisualizer(micStream);
 
-config = await (await fetch("/config.json")).json();
-$("lang").addEventListener("click", () => { lang = lang === "de" ? "en" : "de"; render(); });
-$("start").addEventListener("click", start);
-window.onTurnstile = () => window.turnstile.render("#captcha", {
-  sitekey: config.turnstileSiteKey,
-  callback: (token) => { captchaToken = token; dispatch("captcha_ok"); },
-  "expired-callback": () => { captchaToken = ""; dispatch("captcha_lost"); },
-});
-const wait = setInterval(() => { if (window.turnstile) { clearInterval(wait); window.onTurnstile(); } }, 200);
-render();
+// For testing purposes, if you don't have mic access yet, this creates fake data
+// so you can see the visualizer working immediately.
+setInterval(() => {
+    if (!analyser) {
+        // Simulate a voice for testing
+        const fakeData = new Uint8Array(128);
+        for (let i = 0; i < 128; i++) {
+            fakeData[i] = Math.random() * 255;
+        }
+        // We bypass the analyser for the demo
+        if (!dataArray) dataArray = fakeData;
+    }
+}, 100);
