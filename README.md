@@ -1,10 +1,12 @@
-# Praxis-Telefon
+# Praxis-Telefon: AI Voice Receptionist
+
+### 📞 **[Call the live AI now: +1 484 998 6615](tel:+14849986615)**
+*Test it yourself: The AI answers in German, books appointments, and has a 112 emergency guardrail. It runs on LiveKit Cloud with 1.6s latency.*
+
+**Live Web Demo:** [praxis-telefon-production.up.railway.app](https://praxis-telefon-production.up.railway.app)
 
 German-first, English-capable AI phone receptionist for a fictional doctor's office (portfolio project).
-
-Status: **M3 done** – safety, relative dates, honest speech (sentence filters), English
-calls, practice FAQ and barge-in tuning on top of the M2 appointment tools. Synthetic data
-only: a fictional practice, made-up patients, phone numbers in fictional ranges.
+Status: **M3 done** – safety, relative dates, honest speech (sentence filters), English calls, practice FAQ and barge-in tuning on top of the M2 appointment tools. Synthetic data only: a fictional practice, made-up patients, phone numbers in fictional ranges.
 
 ```
 uv sync
