@@ -1,77 +1,7 @@
-/* 2030 AI Interface - Living Neural Network */
-:root {
-  --bg: #02040a;
-  --primary: #00f0ff; /* Cyber Cyan */
-  --secondary: #7000ff; /* Deep Purple */
-  --text: #ffffff;
-  --text-muted: #8892b0;
-  --surface: rgba(10, 15, 30, 0.4);
-}
-
-body {
-  margin: 0;
-  font-family: 'Inter', -apple-system, sans-serif;
-  background-color: var(--bg);
-  color: var(--text);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  overflow: hidden;
-  position: relative;
-}
-
-/* The Moving Background Orbs (Living AI) */
-body::before, body::after {
-  content: '';
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(100px);
-  z-index: -1;
-  opacity: 0.5;
-  animation: float 10s infinite ease-in-out alternate;
-}
-
-body::before {
-  width: 400px;
-  height: 400px;
-  background: var(--primary);
-  top: -10%; left: -10%;
-}
-
-body::after {
-  width: 500px;
-  height: 500px;
-  background: var(--secondary);
-  bottom: -20%; right: -10%;
-  animation-delay: -5s;
-}
-
-@keyframes float {
-  0% { transform: translate(0, 0) scale(1); }
-  100% { transform: translate(100px, 50px) scale(1.2); }
-}
-
-/* Glassmorphism Card */
-main {
-  background: var(--surface);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 32px;
-  padding: 3rem;
-  max-width: 650px;
-  width: 90%;
-  box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  text-align: center;
-  position: relative;
-  z-index: 10;
-}
-
-/* The AI Robot Face / Orb */
-.voice-orb-container {
-  width: 120px;
-  height: 120px;
+/* Generative AI Face Container */
+.ai-face-container {
+  width: 150px;
+  height: 150px;
   margin: 0 auto 2rem auto;
   position: relative;
   display: flex;
@@ -79,114 +9,20 @@ main {
   align-items: center;
 }
 
-.voice-orb {
-  width: 80px;
-  height: 80px;
-  background: radial-gradient(circle at 30% 30%, #ffffff, var(--primary), var(--secondary));
-  border-radius: 50%;
-  box-shadow: 0 0 40px var(--primary), inset 0 0 20px rgba(255,255,255,0.5);
-  z-index: 10;
-  animation: breathe 4s ease-in-out infinite;
-}
-
-.ring {
-  position: absolute;
+#ai-face {
   width: 100%;
   height: 100%;
-  border-radius: 50%;
-  border: 2px solid var(--primary);
-  opacity: 0;
-  animation: ripple 3s cubic-bezier(0.1, 0.8, 0.3, 1) infinite;
-}
-.ring:nth-child(2) { animation-delay: 1.5s; border-color: var(--secondary); }
-
-@keyframes breathe {
-  0%, 100% { transform: scale(1); box-shadow: 0 0 30px var(--primary); }
-  50% { transform: scale(1.05); box-shadow: 0 0 60px var(--primary); }
+  filter: drop-shadow(0 0 20px var(--primary));
+  transition: filter 0.3s ease;
 }
 
-@keyframes ripple {
-  0% { transform: scale(0.8); opacity: 0.8; border-width: 4px; }
-  100% { transform: scale(2); opacity: 0; border-width: 0px; }
+/* When the AI is speaking, make it glow brighter */
+#ai-face.speaking {
+  filter: drop-shadow(0 0 40px var(--primary)) drop-shadow(0 0 80px var(--secondary));
+  animation: speak-pulse 1s infinite alternate;
 }
 
-/* Typography */
-h1 {
-  font-size: 2.2rem;
-  font-weight: 800;
-  margin-bottom: 1rem;
-  background: linear-gradient(135deg, #ffffff, var(--primary));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  letter-spacing: -0.02em;
+@keyframes speak-pulse {
+  from { transform: scale(1); }
+  to { transform: scale(1.05); }
 }
-
-#intro {
-  color: var(--text-muted);
-  font-size: 1.1rem;
-  line-height: 1.6;
-  margin-bottom: 2rem;
-}
-
-/* Language Button */
-#lang {
-  position: absolute;
-  top: 1.5rem;
-  right: 1.5rem;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
-  color: var(--text-muted);
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: 0.2s;
-}
-#lang:hover { background: rgba(255,255,255,0.1); color: white; }
-
-/* Notice Box (Data Terminal) */
-#notice {
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
-  padding: 1.5rem;
-  text-align: left;
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  margin-bottom: 2rem;
-  max-height: 150px;
-  overflow-y: auto;
-  font-family: 'DM Mono', monospace;
-}
-#notice-title { color: var(--primary); font-size: 0.9rem; margin-top: 0; }
-#notice-list { padding-left: 1.2rem; }
-
-/* The Start Button */
-#start {
-  background: linear-gradient(90deg, var(--primary), var(--secondary));
-  color: #000;
-  border: none;
-  padding: 1.2rem 2rem;
-  font-size: 1.1rem;
-  font-weight: 800;
-  border-radius: 16px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
-  width: 100%;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-#start:hover:not(:disabled) {
-  transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 0 40px rgba(0, 240, 255, 0.8);
-}
-#start:disabled {
-  background: #1a1a2e;
-  color: #4a5568;
-  box-shadow: none;
-  cursor: not-allowed;
-}
-
-/* Status */
-#status { margin-top: 1.5rem; font-size: 0.9rem; color: var(--primary); font-weight: 600; text-shadow: 0 0 10px var(--primary); }
-#timer { font-family: monospace; color: #ff007f; font-size: 1.3rem; margin-top: 1rem; }
