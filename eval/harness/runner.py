@@ -89,6 +89,32 @@ def _snapshot(conn: Any, initial_booking_ids: set[int]) -> dict[str, Any]:
     return {"bookings": bookings, "messages": messages}
 
 
+def apply_setup(conn: Any, s: Scenario) -> None:
+    """Scenario patients and bookings before the call (roadmap item 4). Patients first, so
+    a booking finds its patient by exact name and never merges two similar names."""
+    from datetime import date
+
+    from tests.conftest import NOW, at, slot_at
+
+    from praxis_telefon.db.schema import name_key
+    from praxis_telefon.tools import scheduling
+
+    for p in s.seed_patients:
+        conn.execute(
+            "INSERT INTO patients (full_name, name_key, date_of_birth) VALUES (?, ?, ?)",
+            (p["name"], name_key(p["name"]), p["dob"]),
+        )
+    for b in s.seed_bookings:
+        day = date.fromisoformat(b["day"])
+        scheduling.book(
+            conn,
+            now=NOW,
+            slot_id=slot_at(conn, at(day, int(b["hour"])), "Weber"),
+            patient_name=b["name"],
+            date_of_birth=date.fromisoformat(b["dob"]),
+        )
+
+
 def run_conversation(scenario_id: str, run: int) -> dict[str, Any]:
     """One scripted call; returns its record (never raises: errors are recorded)."""
     import asyncio
@@ -115,6 +141,7 @@ def run_conversation(scenario_id: str, run: int) -> dict[str, Any]:
     claim_gate.SENTENCE_HOOK = h._collect
     mark = len(h.safety_records())
     conn, _ = h.new_db(erika_booked=s.erika_booked)
+    apply_setup(conn, s)
     initial = {r[0] for r in conn.execute("SELECT id FROM bookings")}
     clock = (lambda: FRIDAY_10) if s.clock == "friday_10" else (lambda: NOW)
     settings = Settings.from_env()
@@ -156,6 +183,7 @@ def run_conversation(scenario_id: str, run: int) -> dict[str, Any]:
                         identity=_identity(s),
                         language=s.caller.language,
                         slots_index=call.last_slots_index(),
+                        spelling=s.caller.spelling,
                     )
                     await say(line)
             return session.history

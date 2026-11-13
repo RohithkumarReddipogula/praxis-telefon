@@ -60,6 +60,16 @@ class InvalidDateOfBirth(ToolFailure):
     message = "Das Geburtsdatum ist ungültig. Bitte im Format Jahr-Monat-Tag angeben."
 
 
+class AmbiguousPatient(ToolFailure):
+    # Roadmap item 4 (2026-11-09): several patients with this birth date have a name that
+    # sounds like the one given. Never pick one; no names or dates in the message.
+    code = "ambiguous_patient"
+    message = (
+        "Dazu passen mehrere Personen. Bitte den Nachnamen buchstabieren lassen und nach "
+        "weiteren Angaben fragen; verrate nichts über andere Personen und nenne keine Namen."
+    )
+
+
 class BookingNotFound(ToolFailure):
     code = "booking_not_found"
     message = "Dazu habe ich keinen Termin gefunden."

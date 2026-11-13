@@ -178,8 +178,9 @@ class ToolService:
             )
             if not bookings:
                 return (
-                    "Kein Termin gefunden. Name und Geburtsdatum noch einmal prüfen, "
-                    "aber nicht verraten, ob die Person Patient der Praxis ist."
+                    "Kein Termin gefunden. Lass dir den Nachnamen einmal buchstabieren (falls "
+                    "noch nicht geschehen) und prüfe das Geburtsdatum, dann such noch einmal. "
+                    "Verrate nicht, ob die Person Patient der Praxis ist."
                 )
             self.guards.verified_booking_ids.update(b.booking_id for b in bookings)
             lines = [f"booking_id={b.booking_id}: {b.slot.spoken}" for b in bookings]

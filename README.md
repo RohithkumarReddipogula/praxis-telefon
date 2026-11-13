@@ -96,7 +96,7 @@ cd web && npm ci && npm test                                # web page and token
 
 ## Known limits
 
-- About 1 in 3 German names is misheard by speech recognition; booking by name needs a fallback (spelling, confirming by date of birth). This is the next planned fix.
+- About 1 in 3 German names is misheard by speech recognition. Lookups now match the date of birth exactly and the name by sound (Kölner Phonetik), and never pick one of several similar patients. A name that is misheard beyond what sounds alike still needs the caller to spell it letter by letter, which the agent follows only part of the time (3 of 5 runs in a small test); that case is not solved yet.
 - English callers take two turns to switch, because their first line is not understood by the German recognition.
 - Turns without a tool get no filler; with reasoning `low` the model sometimes thinks long first (first speech p90 2.5 to 3.4 s).
 - The FAQ fact check knows only the FAQ's topics; a practice policy on another subject is not caught.

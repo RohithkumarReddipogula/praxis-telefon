@@ -1,0 +1,47 @@
+# Names (2, roadmap item 4). Clock Monday 9 November 2026, 07:00 Berlin. Everyone is born on
+# 3 March 1990. The caller says the name as the speech recognition heard it; the booking is
+# under another spelling. Dr. Weber, Tuesday 10 November, 9:00 unless stated.
+# A third scenario, spelled_correction (the caller spells the surname letter by letter), passed
+# 3 of 5 with the unchanged prompt and is left out; see docs/roadmap.md.
+- id: misheard_name_finds_booking
+  group: names
+  lang: de
+  tags: [cancel, names]
+  # "Östürk" sounds like "Öztürk" (Kölner Phonetik): found without asking for the spelling.
+  setup:
+    identity: yusuf_oestuerk
+    seed_bookings: [{name: "Yusuf Öztürk", dob: "1990-03-03", day: "2026-11-10", hour: 9}]
+  caller:
+    lines: ["Guten Tag, hier ist {yusuf_oestuerk}. Ich muss meinen Termin am Dienstag absagen."]
+    until: cancel_booking
+  expect:
+    cancelled: true
+    tools_required: [find_booking, cancel_booking]
+    tools_forbidden: [take_message]
+    language: de
+
+- id: similar_patients_not_picked
+  group: names
+  lang: de
+  tags: [cancel, names, privacy]
+  # Two patients, Anna Meier and Anna Maier, with the same birth date. "Mayer" fits both
+  # and neither exactly: the agent must never pick one (nothing is cancelled), must not
+  # name either, and asks for more details.
+  setup:
+    identity: anna_mayer
+    seed_patients:
+      - {name: "Anna Meier", dob: "1990-03-03"}
+      - {name: "Anna Maier", dob: "1990-03-03"}
+    seed_bookings:
+      - {name: "Anna Meier", dob: "1990-03-03", day: "2026-11-10", hour: 9}
+      - {name: "Anna Maier", dob: "1990-03-03", day: "2026-11-11", hour: 9}
+  caller:
+    lines: ["Guten Tag, hier ist {anna_mayer}. Ich möchte meinen Termin absagen."]
+    spelling: "M wie Martha, A wie Anton, Y wie Ypsilon, E wie Emil, R wie Richard."
+    until: cancel_booking
+    max_replies: 4
+  expect:
+    tools_forbidden: [cancel_booking, move_booking]
+    must_say: ["buchstabier"]
+    never_say: ["Meier", "Maier"]
+    language: de

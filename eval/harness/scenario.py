@@ -3,7 +3,8 @@
 Each scenario: id, group, lang, tags, setup (database and clock), caller (lines, a
 rule-based behaviour, language, the tool that ends the call), expect (deterministic
 checks, eval/harness/checks.py), review (collect the agent's replies for a human).
-Placeholders in lines: {max}, {erika}, {max_en}, {erika_en}, {phone_de}, {phone_en}.
+Placeholders in lines: {max}, {erika}, {max_en}, {erika_en}, {phone_de}, {phone_en} and the
+name-fix identities. Setup: clock, identity, erika_booked, seed_patients, seed_bookings.
 "<silence>" as a line: the caller speaks but nothing is recognised (a strike).
 Synthetic data only.
 """
@@ -22,6 +23,10 @@ IDENTITIES = {
     "max_en": "Max Mustermann, born on the first of February nineteen seventy-nine",
     "erika_en": "Erika Mustermann, born on the fifteenth of June nineteen eighty-five",
     "moritz": "Moritz Mustermann, geboren am ersten Februar neunzehnhundertneunundsiebzig",
+    # Roadmap item 4: names as the speech recognition heard them (the booking is under
+    # another spelling), always born on the third of March 1990.
+    "yusuf_oestuerk": "Yusuf Östürk, geboren am dritten März neunzehnhundertneunzig",
+    "anna_mayer": "Anna Mayer, geboren am dritten März neunzehnhundertneunzig",
 }
 PLACEHOLDERS = {
     **IDENTITIES,
@@ -77,6 +82,7 @@ class Caller:
     until: tuple[str, ...] = ()  # tools whose success (all of them) ends the call
     max_replies: int = 6
     step_list: tuple[Step, ...] = ()
+    spelling: str = ""  # what the caller says when asked to spell the surname
 
     @property
     def steps(self) -> tuple[Step, ...]:
@@ -98,6 +104,8 @@ class Scenario:
     review: bool = False
     audio: bool = False  # part of the audio subset
     notes: str = ""
+    seed_patients: tuple[dict[str, Any], ...] = ()  # {name, dob}: patients without a booking
+    seed_bookings: tuple[dict[str, Any], ...] = ()  # {name, dob, day, hour}: Dr. Weber
     extra: dict[str, Any] = field(default_factory=dict)
 
 
@@ -147,6 +155,7 @@ def parse(data: dict[str, Any]) -> Scenario:
             language=caller.get("language", data["lang"]),
             until=_until(caller.get("until")),
             max_replies=int(caller.get("max_replies", 6)),
+            spelling=str(caller.get("spelling", "")),
             step_list=tuple(
                 Step(
                     tuple(_line(line) for line in st.get("lines", [])),
@@ -164,6 +173,8 @@ def parse(data: dict[str, Any]) -> Scenario:
         review=bool(data.get("review", False)),
         audio=bool(data.get("audio", False)),
         notes=data.get("notes", ""),
+        seed_patients=tuple(data.get("setup", {}).get("seed_patients", ())),
+        seed_bookings=tuple(data.get("setup", {}).get("seed_bookings", ())),
     )
 
 

@@ -69,6 +69,7 @@ def test_all_scenario_files_are_valid() -> None:
         "safety",
         "language",
         "hard_callers",
+        "names",
     }
 
 

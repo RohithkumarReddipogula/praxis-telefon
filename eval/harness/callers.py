@@ -55,6 +55,7 @@ _CHOICE = re.compile(
 _ASKS_IDENTITY = re.compile(
     r"\bnamen?\b|geburtsdatum|geboren|date of birth|birthday|your name", re.I
 )
+_ASKS_SPELLING = re.compile(r"buchstabier|spell", re.I)
 _ASKS_TIME = re.compile(
     r"vormittag|nachmittag|tageszeit|uhrzeit|morning|afternoon|time of day|what time", re.I
 )
@@ -83,14 +84,18 @@ def reply(
     identity: str,
     language: str,
     slots: bool = False,
+    spelling: str = "",
 ) -> str:
-    """``slots``: the agent's last reply came after new find_slots results."""
+    """``slots``: the agent's last reply came after new find_slots results; ``spelling``:
+    what the caller says when asked to spell the surname (roadmap item 4)."""
     lang = language if language in ("de", "en") else "de"
 
     def say(key: str) -> str:
         return REPLIES[key][lang].format(identity=identity)
 
     asks = agent_text.rstrip().endswith("?")
+    if spelling and _ASKS_SPELLING.search(agent_text):
+        return spelling
     if behaviour == "confused" and asks and not state.asked_pardon:
         state.asked_pardon = True
         return say("pardon")
@@ -126,6 +131,7 @@ def reply_in_call(
     identity: str,
     language: str,
     slots_index: int,
+    spelling: str = "",
 ) -> str:
     """``reply`` with the slot offer tracked: an offer counts as answered only once the
     caller chose a slot (M4 rerun 2026-11-08, confused_caller_books: a "Wie bitte?" used
@@ -137,6 +143,7 @@ def reply_in_call(
         identity=identity,
         language=language,
         slots=slots_index > state.answered_slots,
+        spelling=spelling,
     )
     lang = language if language in ("de", "en") else "de"
     if line == REPLIES["first_slot"][lang]:

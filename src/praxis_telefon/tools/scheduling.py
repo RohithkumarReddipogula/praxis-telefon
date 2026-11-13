@@ -16,6 +16,7 @@ from typing import Literal
 
 from praxis_telefon.db.schema import PRACTICE_TZ, name_key, to_utc_iso
 from praxis_telefon.tools.errors import (
+    AmbiguousPatient,
     BookingNotActive,
     BookingNotFound,
     DoctorNotFound,
@@ -26,6 +27,7 @@ from praxis_telefon.tools.errors import (
     SlotTaken,
 )
 from praxis_telefon.tools.formatting import spoken_slot
+from praxis_telefon.tools.phonetics import name_codes, sounds_alike
 from praxis_telefon.tools.validation import check_date_of_birth, clean_name, require_aware
 
 PartOfDay = Literal["morning", "afternoon", "any"]
@@ -105,11 +107,29 @@ def _get_slot(conn: sqlite3.Connection, slot_id: int) -> sqlite3.Row:
 
 
 def _find_patient(conn: sqlite3.Connection, name: str, date_of_birth: date) -> int | None:
+    """The patient with this exact date of birth and this name, exactly or by sound.
+
+    Exact name (case and spacing aside) wins. Otherwise patients with that birth date whose
+    first and last name sound alike (Kölner Phonetik): one match is used; several raise
+    ``AmbiguousPatient`` (never pick one). No match: None.
+    """
+    dob = date_of_birth.isoformat()
     row = conn.execute(
         "SELECT id FROM patients WHERE name_key = ? AND date_of_birth = ?",
-        (name_key(name), date_of_birth.isoformat()),
+        (name_key(name), dob),
     ).fetchone()
-    return None if row is None else int(row["id"])
+    if row is not None:
+        return int(row["id"])
+    if name_codes(name) is None:
+        return None
+    alike = [
+        int(r["id"])
+        for r in conn.execute("SELECT id, full_name FROM patients WHERE date_of_birth = ?", (dob,))
+        if sounds_alike(str(r["full_name"]), name)
+    ]
+    if len(alike) > 1:
+        raise AmbiguousPatient()
+    return alike[0] if alike else None
 
 
 def _local_day_bounds_utc(day: date) -> tuple[str, str]:

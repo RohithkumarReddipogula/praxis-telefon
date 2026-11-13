@@ -22,6 +22,13 @@ from 7 December, about 125 call minutes: the real limit, not money).
 - [ ] **4. Name fix (item 4).** `find_booking` matches the birth date exactly and the name
       by Kölner Phonetik; several matches: ask for more details, never pick one; unclear
       name: ask for the spelling.
+      Done 2026-11-13 (offline): `tools/phonetics.py`, sound-based `_find_patient` (also used
+      by `book`: a sound-alike patient with the same birth date is reused), `AmbiguousPatient`,
+      the caller's spelled surname accepted by `caller_identity`. Harness scenarios
+      `misheard_name_finds_booking` and `similar_patients_not_picked` pass 5/5. Left open:
+      the letter-by-letter spelling flow (scenario `spelled_correction`, 3/5): the prompt
+      still says to read the name back when nothing is found, and the agent sometimes
+      searches again with the old spelling. Needs a prompt change and a rerun (about $0.03).
       Seen in the 2026-11-09 console calls (logs, no words): no call reached a booking.
       (a) Names and birth dates were misrecognised repeatedly. (b) Short utterances of
       0.8-1.8 s (slot choice, "Ja") came back from the speech recognition as nothing at

@@ -61,7 +61,7 @@ uv run python -m praxis_telefon.agent.main dev              # LiveKit Cloud (nee
   from the seed); the LLM picks the topic via `practice_info(topic)`
 - `src/praxis_telefon/db/` – SQLite schema, access layer, synthetic seed data (28 days)
 - `eval/` – scripted conversation scenarios and scoring; `leak_report.py` compares live runs
-- `eval/scenarios/` + `eval/harness/` – M4 evaluation harness: 46 YAML scenarios,
+- `eval/scenarios/` + `eval/harness/` – M4 evaluation harness: 48 YAML scenarios,
   rule-based callers, deterministic checks, Wilson/bootstrap intervals, cost cap
   (`runner`, paid; `report`, `compare`, free)
 - `docs/experiments/` – experiment write-ups (`reasoning-leak.md`, `stt-language.md`,
@@ -147,7 +147,7 @@ Done and pushed:
 ## Status (M4 in progress, 2026-11-07)
 
 Done and pushed:
-- **Evaluation harness** (`eval/harness/`, `eval/scenarios/`): 46 scenarios in text mode,
+- **Evaluation harness** (`eval/harness/`, `eval/scenarios/`): 48 scenarios in text mode,
   N=5 each, 4 worker processes, hard cost cap (default $1). Checks from the database and
   the transcript (task success, tools, unbacked claims, `never_say` leaks, language per
   turn and actually spoken, read-back = saved number); Wilson per scenario, bootstrap over
