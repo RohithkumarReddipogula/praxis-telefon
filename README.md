@@ -1,150 +1,108 @@
-# Praxis-Telefon: AI Voice Receptionist
+# Praxis-Telefon
 
-### 📞 **[Call the live AI now: +1 484 998 6615](tel:+14849986615)**
-*Test it yourself: The AI answers in German, books appointments, and has a 112 emergency guardrail. It runs on LiveKit Cloud with 1.6s latency.*
+A German-first, English-capable AI phone receptionist for a doctor's practice: it books, moves and cancels appointments, answers practice questions and takes messages, on a real phone line and in the browser.
 
-**Live Web Demo:** [praxis-telefon-production.up.railway.app](https://praxis-telefon-production.up.railway.app)
+## Try it
 
-German-first, English-capable AI phone receptionist for a fictional doctor's office (portfolio project).
-Status: **M3 done** – safety, relative dates, honest speech (sentence filters), English calls, practice FAQ and barge-in tuning on top of the M2 appointment tools. Synthetic data only: a fictional practice, made-up patients, phone numbers in fictional ranges.
+- **Call this number to talk to the agent:** +1 484 998 6615
+- **Live web demo (in the browser, no phone needed):** https://praxis-telefon-production.up.railway.app
 
-```
-uv sync
-uv run pytest                    # offline, no keys needed
-uv run pytest -m live tests/live # optional: real LLM tests, needs .env
-```
+This is a demo of a fictional practice (Hausarztpraxis Dr. Weber) with synthetic data. Please do not give real personal or health data; make up a name and a date of birth. Calls are limited to 5 minutes, and the number of demo calls per day and month is limited.
 
-Stack: Python 3.12, LiveKit Agents, Deepgram Nova-3 (STT), ElevenLabs Flash v2.5 (TTS),
-Claude Haiku 5.5 via OpenRouter (reasoning `low`, prompt caching), SQLite, pytest.
+## What it does
 
-## What the agent can do
+- **Appointments:** finds up to three free slots from the caller's own words ("next Tuesday", "Ende der Woche", "tomorrow afternoon") and books, moves or cancels after reading the details back and getting a clear yes. Code turns the words into dates in Europe/Berlin; the LLM never computes a date.
+- **Practice questions:** opening hours, address, parking, repeat prescriptions, referrals, sick notes, holidays, insurance card, new patients, answered only from a synthetic FAQ. Anything else: "I don't know, shall I take a message?".
+- **Messages for the team:** name, callback number and a fixed category, no medical details.
+- **German and English:** German by default. "English" or "Können wir Englisch sprechen?" switches the call, "Deutsch, bitte" switches back.
+- **Safety:** emergency and suicide phrases get a fixed, uninterruptible message without the LLM; a request for a human, or two unrecognised turns in a row, hands over to message-only mode.
 
-- **Appointments:** find free slots (at most 3) and book, move or cancel, after reading
-  the details back and getting a clear yes. Slots are searched with the caller's own
-  words ("nächsten Dienstag", "Ende der Woche", "tomorrow afternoon"); code turns them
-  into dates in Europe/Berlin (weekdays, ranges, closed days, DST, 28-day horizon), the
-  LLM never computes a date.
-- **Messages for the team:** name, callback number (spoken digits converted) and fixed
-  categories, no medical details; a second reason for the same caller updates the note.
-- **Practice questions** (opening hours, address, parking, repeat prescriptions,
-  referrals, sick notes, holidays, insurance card, new patients) answered only from a
-  synthetic FAQ; anything else: "I don't know, shall I take a message?".
-- **German and English:** German by default; "English" or "Können wir Englisch sprechen?"
-  switches the call (and the speech recognition) to English, "Deutsch, bitte" back.
-- **Safety:** emergency and suicide phrases (DE/EN) get a fixed, uninterruptible message
-  without the LLM, and booking is off for the rest of the call; a request for a human or
-  two unrecognised turns hand over to message-only mode.
-- Fictional practice (Dr. Weber, Dr. Brandt), opening hours Mon, Tue, Thu 8–12 and
-  15–18, Wed and Fri 8–12.
+## Key numbers
 
-## Guaranteed in code, not only in the prompt
-
-- **Slot and booking guards:** `book` / `move_booking` only take slots `find_slots`
-  returned in this call; `move_booking` / `cancel_booking` only bookings this call looked
-  up by name and date of birth, or created. A unique index makes double bookings
-  impossible.
-- **Safety decisions** are replayed from the conversation on every reply, so a discarded
-  preemptive LLM run cannot change the call's state.
-- **Sentence filters** check every sentence before it is spoken (`agent/claim_gate.py`):
-  - claims ("gebucht", "Nachricht aufgenommen") only after the matching tool succeeded,
-    except in a read-back that ends with a confirmation question;
-  - no spoken reasoning ("This is a new appointment request, so I'll …", internal ids),
-    no sentence in the wrong language for the call;
-  - no weekday or month the LLM worked out itself (only the caller, a tool result or
-    today's date can name one);
-  - no practice fact without `practice_info` (a closed day also from `find_slots`);
-  - no repeated "new or existing appointment?" question.
-  At most one retry per reply, then a fixed sentence. False-positive check: 617 passing
-  live tests replayed through the filters (`tests/data/live_sentences.jsonl`).
-- **The call's language** is decided by code from the speech-recognition finals, never
-  by the LLM (one misheard line cannot switch a German call).
-- **Privacy:** logs hold labels, times and counts, never transcripts; tracing stays
-  local; interruption detection runs locally (Silero), not in the cloud.
-
-## Experiments (M3)
-
-Each with a decision rule set before measuring; write-ups in `docs/experiments/`.
-
-| Write-up | Question | Result |
+| Measure | Result | Source |
 |---|---|---|
-| [`reasoning-leak.md`](docs/experiments/reasoning-leak.md) | Why does the agent speak its reasoning before tools? 2×2, 5 runs per arm | **Reasoning `low`**: 0 vs 27 leaked sentences (p = 0.008), +58 ms LLM TTFT; German tool descriptions: no effect. A code-spoken "Einen Moment, bitte." closes the silence before tools (first speech p50 2128 → 1212 ms) |
-| [`stt-language.md`](docs/experiments/stt-language.md) | Deepgram `de` vs `multi` for English callers | On 640 synthetic clips `multi` was +8.8 points on German, but with the user's real accented German it tagged Telugu/Afrikaans and lost digits (also with `language_hint`): **rejected**. Instead `de` by default and the stream switched to `en` on request; built from the user's own recordings, no audio lost when switching after a final |
-| [`faq-retrieval.md`](docs/experiments/faq-retrieval.md) | Local keyword (BM25) retrieval for FAQ answers | **Negative result:** 82–92 % right with up to 28 % false answers on held-out questions (bar: ≥ 95 % / ≤ 5 %); fixes traded misses for false answers |
-| [`faq-topic-choice.md`](docs/experiments/faq-topic-choice.md) | The LLM picks the FAQ topic instead | Second author's 10 questions: **100 % right, 0 % false**; Claude's 122: 100 % / 3.2 % after a description fix (changes after run 1 are marked as such) |
+| Offline tests (Python) | 2,554, no keys or network needed | `uv run pytest` |
+| Web tests (Node 24) | 69 | `cd web && npm test` |
+| Live LLM tests | 135 of 135 passed, about $0.08 per run | `tests/live/`, latest full run after the M4 fixes |
+| Scenario evaluation | 229 of 230 passed (99.6 %, 95 % interval 97.6 to 100 %), 46 scenarios x 5, $0.165 | `eval/harness`; the one miss was a check that was too strict, fixed since |
+| Baseline (before the privacy fixes) | 200 of 200, 40 scenarios x 5, $0.135 | same harness |
+| Unbacked claims, invented facts, wrong language | 0 of 230 each | same run |
+| Caller line to first speech | p50 0.99 s, p95 2.56 s | scenario run, text mode (LLM and tools, no STT or TTS) |
+| Caller line to the answer | p50 1.78 s, p95 3.63 s | same |
+| Barge-in: time until the agent is quiet | 0.40 s and 0.50 s | voice test, real interruptions |
+| Prompt cache | about 80 % of prompt tokens read from the cache | live run $0.14 to $0.055 |
 
-## Tests
+Latency in text mode excludes speech recognition and synthesis. In real calls Deepgram's final transcript arrives about 0.13 s after the caller stops (synthetic A/B) and ElevenLabs delivers first audio in about 0.16 s (a single console measurement). Samples are small: five runs per scenario, one non-native speaker for the voice tests.
 
-- **Offline** (`uv run pytest`, about 2,300 tests, no keys): tools, date resolution,
-  safety phrases and state replay, every filter with regression tests named after the
-  bug, the language rule, FAQ content (opening hours generated from the seed), the
-  measurement counters, and the replayed live corpus.
-- **Live** (`uv run pytest -m live tests/live`, about $0.18): the real agent and LLM in
-  LiveKit's text mode with a scripted caller and an in-memory synthetic database; 135
-  tests (appointments, dates, safety, triage, English calls and switching, FAQ). Each
-  records timings, token counts and every sentence the LLM produced (`LIVE_CORPUS`);
-  `uv run python -m eval.leak_report eval/results/<run>.jsonl` summarises a run.
-- **Voice tests** by the user in the console for what text mode cannot show: speech
-  recognition with accented German, switching the stream, barge-in.
+### How we got here
 
-## Latency
+Single console calls in the first milestone (MacBook microphone, German), measured from the caller stopping to the agent's first audio. One call per row, so read it as the story of the decisions, not as a benchmark:
 
-Live text-mode suite (the LLM and tools, no STT/TTS), M3 final run, 135 tests, 225 turns:
-
-| | p50 | p90 |
-|---|---|---|
-| LLM time to first output | 816 ms | 2043 ms |
-| Caller line to first speech (incl. the "Einen Moment" filler) | 899 ms | 2328 ms |
-| Caller line to the answer | 1611 ms | 3247 ms |
-
-Around that in a real call: Deepgram's final transcript about 0.13 s (p90 0.26 s) after
-the caller stops (synthetic A/B), end of turn after at least 0.4 s and at most 1.5 s,
-ElevenLabs first audio about 0.16 s (single console measurement). FAQ answers take one
-extra LLM round trip; the filler covers it.
-
-**How we got here.** Single console calls in M1 (MacBook mic, German), end-to-end from
-the caller stopping to the agent's first audio:
-
-| LLM (via OpenRouter) | Reasoning | Max endpointing | LLM TTFT | End-to-end |
+| LLM (via OpenRouter) | Reasoning | Max endpointing | LLM time to first token | End to end |
 |---|---|---|---|---|
 | Gemini 3.8 Flash | medium (default) | 3.0 s (default) | 6.8 s | 9.5 s |
 | Gemini 3.8 Flash | low | 1.5 s | 2.96 s | 3.7 s |
 | Claude Haiku 5.5 | none | 1.5 s | 0.79 s | 1.6 s |
 
-Haiku with reasoning `none` was fast but sometimes spoke its reasoning before tools, so
-M3 moved to reasoning `low` (0 leaks, +58 ms LLM TTFT) and added the code-spoken "Einen
-Moment, bitte." filler, which brought first speech before tools back from 2.1 s to 1.2 s
-(p50, text mode; `docs/experiments/reasoning-leak.md`).
+Haiku with reasoning `none` was fast but sometimes spoke its reasoning before tools. The next milestone moved to reasoning `low` (0 leaks, +58 ms LLM time to first token) and added the code-spoken "Einen Moment, bitte." filler, which brought first speech before tools back from 2.1 s to 1.2 s (p50, text mode; see the reasoning-leak experiment below).
 
-**Barge-in** (voice test, `false_interruption_timeout` 1.0 s instead of LiveKit's 2.0 s):
-the agent went quiet 0.40 s and 0.50 s after a real interruption, including a hesitant
-"Nein … äh … lieber am Montag"; "mhm" and a cough pause it for about 1 s instead of 2 s
-before it resumes; no "resume, then cut". The turn log records every barge-in
-(`time_to_quiet_s`, outcome) and every final transcript that arrives after the turn was
-committed (0 of 6 turns in the voice test; `min_delay` stays 0.4 s).
+## How it works
 
-## Run the agent
+```
+caller (phone or browser)
+   |  WebRTC / SIP
+LiveKit Cloud  ---  agent worker (Python, LiveKit Agents, eu-central)
+                       Deepgram Nova-3 (speech to text)
+                       Claude Haiku 5.5 via OpenRouter (one tool-calling LLM, reasoning "low", prompt caching)
+                       ElevenLabs Flash v2.5 (text to speech)
+                       SQLite (appointments, synthetic seed data)
+browser: small page + token endpoint (Node, Railway, Amsterdam), Cloudflare Turnstile
+```
+
+- The agent runs on LiveKit Cloud (project in the EU data region, agent in Frankfurt). The web page and its token endpoint run on Railway in Amsterdam.
+- The LLM only chooses what to say and which tool to call. Code owns state, dates, safety decisions, consent and every write to the database.
+- Interruption detection (Silero) runs locally in the agent, not in the cloud.
+
+## Safety and privacy
+
+- **Consent before changes:** `book`, `move_booking` and `cancel_booking` run only after a read-back and a clear yes from the caller, checked in code (`agent/consent.py`). A refusal blocks the action; the agent never tells the caller which word to say.
+- **No third-party data:** a booking lookup works only for a name the caller introduced as their own, and the sentence filter blocks asking for another person's date of birth. Other people's appointments go to a message for the team. Limit: name plus date of birth is the only check, so a caller who claims to be the patient gets through.
+- **Honest speech:** every sentence passes filters before it is spoken. Claims such as "booked" need the matching tool result, spoken reasoning and invented weekdays or practice facts are blocked, and the language filter follows the call's language. At most one retry per reply, then a fixed sentence.
+- **Logs:** labels, times and counts only, never transcripts or audio. Phone numbers are stored only as a keyed hash (HMAC-SHA256); on the web page the visitor's IP address is stored only as a keyed hash, erased after the day.
+- **Demo limits:** phone calls last at most 5 minutes (warning at 4), 3 calls per caller and day, 15 calls and 45 minutes per day. Web calls: 5 minutes each, 20 minutes a day (at most 4 calls), 60 minutes a month, 3 per visitor and day, Cloudflare Turnstile before a token is issued. When a limit is reached, or the voice fails, the agent signals "busy" to the page and hangs up, never fails silently.
+- **Honest wording on the page:** the privacy notice names every service that receives the caller's voice (Deepgram, OpenRouter with Claude, ElevenLabs, LiveKit, Cloudflare Turnstile) and says that Railway's technical logs may be stored outside the EU.
+
+## Engineering highlights
+
+- **Evaluation harness** (`eval/harness/`, `eval/scenarios/`): 46 scripted YAML scenarios with rule-based callers, run in text mode, N = 5, four worker processes and a hard cost cap. Checks come from the database and the transcript: task success, right tools, unbacked claims, forbidden phrases, language per turn, read-back equals saved value. Wilson intervals per scenario, bootstrap intervals overall, and a paired `compare` that calls a change "helps" or "hurts" only when the interval excludes zero. Its review found the privacy and tool-word issues fixed in the same milestone.
+- **Experiment: reasoning leak** ([`reasoning-leak.md`](docs/experiments/reasoning-leak.md)): why does the agent speak its reasoning before tools? A 2x2 with five runs per arm. Reasoning `low` removed the leak (0 vs 27 leaked sentences, p = 0.008) for +58 ms LLM time to first token; a code-spoken "Einen Moment, bitte." brought first speech before tools from 2.1 s to 1.2 s (p50).
+- **Experiment: STT language** ([`stt-language.md`](docs/experiments/stt-language.md)): Deepgram `multi` was +8.8 points on 640 synthetic clips, but mislabeled and dropped digits on real accented German, so it was rejected; the stream stays German and switches to English on request.
+- **FAQ retrieval** ([`faq-retrieval.md`](docs/experiments/faq-retrieval.md), [`faq-topic-choice.md`](docs/experiments/faq-topic-choice.md)): keyword retrieval missed its bar (82 to 92 % right, up to 28 % false) and was removed; letting the LLM pick the topic and code return the entry reached 100 % right on the second author's questions.
+- Decision rules were set before each measurement, and negative results are written up.
+
+## Run it yourself
 
 Copy `.env.example` to `.env` and fill it in, then:
 
 ```
+uv sync
+uv run pytest                                               # offline, no keys
 uv run -m livekit.agents download-files                     # once: VAD + turn-detector weights
 uv run python -m praxis_telefon.db.seed                     # once: synthetic data (--reset to recreate)
 uv run python -m praxis_telefon.agent.main console          # talk via mic in the terminal
-uv run python -m praxis_telefon.agent.main dev              # LiveKit Cloud (needs LIVEKIT_*)
+uv run python -m eval.harness.runner --n 5 --max-usd 1.0    # scenario evaluation (paid)
+cd web && npm ci && npm test                                # web page and token endpoint
 ```
-
-An older local database must be recreated for the 28-day horizon:
-`uv run python -m praxis_telefon.db.seed --reset`.
 
 ## Known limits
 
-- About 1 in 3 German names is misheard by speech recognition (with `de` and `multi`
-  alike); booking by name needs a fallback (spelling, confirming by date of birth).
-- English callers take two turns to switch (their first line is not understood by the
-  German recognition; the agent then asks them to say "English").
-- Turns without a tool get no filler; with reasoning `low` the model sometimes thinks
-  long first (first speech p90 2.5–3.4 s).
-- The FAQ check knows only the FAQ's topics; a practice policy on another subject
-  ("we can't give results by phone") is not caught.
-- Small samples throughout: 3 runs per live scenario, one non-native speaker for the
-  voice tests, a scripted caller in text mode.
+- About 1 in 3 German names is misheard by speech recognition; booking by name needs a fallback (spelling, confirming by date of birth). This is the next planned fix.
+- English callers take two turns to switch, because their first line is not understood by the German recognition.
+- Turns without a tool get no filler; with reasoning `low` the model sometimes thinks long first (first speech p90 2.5 to 3.4 s).
+- The FAQ fact check knows only the FAQ's topics; a practice policy on another subject is not caught.
+- Short utterances sometimes come back empty from speech recognition, which can trigger the two-strike handover.
+
+## Links
+
+- GitHub: https://github.com/RohithkumarReddipogula/praxis-telefon
+- Portfolio: https://rohithkumarreddipogula.github.io
